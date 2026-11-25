@@ -241,3 +241,22 @@ final class BaselineTests: XCTestCase {
         XCTAssertEqual(m.of, 3)
     }
 }
+
+/// The portfolio against the market.
+final class MarketTests: XCTestCase {
+    func testOverMarketOnTheSameDollars() throws {
+        // Return +$20 on $100; the same dollars made +$4 in MINT and +$25 in
+        // the S&P 500: over r, under market.
+        let p = Equities_V1_Position.with {
+            $0.kind = .long; $0.value = 118; $0.cost = 100; $0.dividends = 2
+            $0.baselineCost = 100; $0.baselineValue = 104; $0.marketValue = 125
+        }
+        let r = try XCTUnwrap(overBaseline([p]))
+        let k = try XCTUnwrap(overMarket([p]))
+        XCTAssertEqual(r.gain - r.baseline, 16, accuracy: 1e-9)
+        XCTAssertEqual(k.gain - k.market, -5, accuracy: 1e-9)
+        XCTAssertEqual(againstMarket(k.gain - k.market), "under market -$5.00")
+        // No market value: not measured against it.
+        XCTAssertNil(overMarket([.with { $0.kind = .long; $0.value = 1; $0.cost = 1; $0.baselineCost = 1 }]))
+    }
+}

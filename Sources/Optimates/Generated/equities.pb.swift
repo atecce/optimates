@@ -814,6 +814,12 @@ struct Equities_V1_HoldingsResponse: Sendable {
 
   var baselineEpochDay: Int32 = 0
 
+  /// And the market, for over/under market: "SPY" (the S&P 500, total
+  /// return), and the day of its last price.
+  var market: String = String()
+
+  var marketEpochDay: Int32 = 0
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -915,6 +921,20 @@ struct Equities_V1_Position: Sendable {
   /// Clears the value of `dividends`. Subsequent reads from it will return its default value.
   mutating func clearDividends() {self._dividends = nil}
 
+  /// The same dollars as baseline_cost, on the same days, in the market
+  /// (HoldingsResponse.market) instead, dividends included: what they'd be
+  /// worth now. Over market (under when negative) is the position's return
+  /// less the market's on the same money: with beta taken as 1, Jensen's
+  /// alpha in dollars. Set with the baseline.
+  var marketValue: Double {
+    get {_marketValue ?? 0}
+    set {_marketValue = newValue}
+  }
+  /// Returns true if `marketValue` has been explicitly set.
+  var hasMarketValue: Bool {self._marketValue != nil}
+  /// Clears the value of `marketValue`. Subsequent reads from it will return its default value.
+  mutating func clearMarketValue() {self._marketValue = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -923,6 +943,7 @@ struct Equities_V1_Position: Sendable {
   fileprivate var _baselineCost: Double? = nil
   fileprivate var _baselineValue: Double? = nil
   fileprivate var _dividends: Double? = nil
+  fileprivate var _marketValue: Double? = nil
 }
 
 struct Equities_V1_MacroRequest: Sendable {
@@ -1291,7 +1312,7 @@ extension Equities_V1_HoldingsRequest: SwiftProtobuf.Message, SwiftProtobuf._Mes
 
 extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".HoldingsResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}accounts\0\u{3}synced_unix\0\u{1}baseline\0\u{3}baseline_epoch_day\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}accounts\0\u{3}synced_unix\0\u{1}baseline\0\u{3}baseline_epoch_day\0\u{1}market\0\u{3}market_epoch_day\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1303,6 +1324,8 @@ extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.syncedUnix) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.baseline) }()
       case 4: try { try decoder.decodeSingularInt32Field(value: &self.baselineEpochDay) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.market) }()
+      case 6: try { try decoder.decodeSingularInt32Field(value: &self.marketEpochDay) }()
       default: break
       }
     }
@@ -1321,6 +1344,12 @@ extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
     if self.baselineEpochDay != 0 {
       try visitor.visitSingularInt32Field(value: self.baselineEpochDay, fieldNumber: 4)
     }
+    if !self.market.isEmpty {
+      try visitor.visitSingularStringField(value: self.market, fieldNumber: 5)
+    }
+    if self.marketEpochDay != 0 {
+      try visitor.visitSingularInt32Field(value: self.marketEpochDay, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1329,6 +1358,8 @@ extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
     if lhs.syncedUnix != rhs.syncedUnix {return false}
     if lhs.baseline != rhs.baseline {return false}
     if lhs.baselineEpochDay != rhs.baselineEpochDay {return false}
+    if lhs.market != rhs.market {return false}
+    if lhs.marketEpochDay != rhs.marketEpochDay {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1386,7 +1417,7 @@ extension Equities_V1_Account: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
 
 extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Position"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ticker\0\u{1}name\0\u{1}kind\0\u{1}quantity\0\u{1}price\0\u{1}value\0\u{1}cost\0\u{3}cost_source\0\u{3}price_epoch_day\0\u{3}baseline_cost\0\u{3}baseline_value\0\u{1}dividends\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ticker\0\u{1}name\0\u{1}kind\0\u{1}quantity\0\u{1}price\0\u{1}value\0\u{1}cost\0\u{3}cost_source\0\u{3}price_epoch_day\0\u{3}baseline_cost\0\u{3}baseline_value\0\u{1}dividends\0\u{3}market_value\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1406,6 +1437,7 @@ extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
       case 10: try { try decoder.decodeSingularDoubleField(value: &self._baselineCost) }()
       case 11: try { try decoder.decodeSingularDoubleField(value: &self._baselineValue) }()
       case 12: try { try decoder.decodeSingularDoubleField(value: &self._dividends) }()
+      case 13: try { try decoder.decodeSingularDoubleField(value: &self._marketValue) }()
       default: break
       }
     }
@@ -1452,6 +1484,9 @@ extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
     try { if let v = self._dividends {
       try visitor.visitSingularDoubleField(value: v, fieldNumber: 12)
     } }()
+    try { if let v = self._marketValue {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 13)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1468,6 +1503,7 @@ extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
     if lhs._baselineCost != rhs._baselineCost {return false}
     if lhs._baselineValue != rhs._baselineValue {return false}
     if lhs._dividends != rhs._dividends {return false}
+    if lhs._marketValue != rhs._marketValue {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

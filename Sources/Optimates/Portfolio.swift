@@ -27,7 +27,7 @@ struct PortfolioView: View {
             }
             if let reply {
                 Section {
-                    Totals(positions: reply.accounts.flatMap(\.positions), balance: reply.accounts.map(\.balance).reduce(0, +), baseline: reply.baseline)
+                    Totals(positions: reply.accounts.flatMap(\.positions), balance: reply.accounts.map(\.balance).reduce(0, +), baseline: reply.baseline, market: reply.market)
                 } footer: {
                     if reply.syncedUnix > 0 {
                         Text("Synced with the brokerage \(Date(timeIntervalSince1970: TimeInterval(reply.syncedUnix)).formatted(.relative(presentation: .named))). Pull to refresh.")
@@ -35,7 +35,7 @@ struct PortfolioView: View {
                 }
                 ForEach(reply.accounts, id: \.name) { account in
                     Section {
-                        Totals(positions: account.positions, balance: account.balance, baseline: reply.baseline)
+                        Totals(positions: account.positions, balance: account.balance, baseline: reply.baseline, market: reply.market)
                         let positions = ordered(account.positions)
                         let all = expanded.contains(account.name)
                         ForEach(Array((all ? positions : Array(positions.prefix(Self.shownAtFirst))).enumerated()), id: \.offset) { _, p in
@@ -117,9 +117,27 @@ func overBaseline(_ positions: [Equities_V1_Position]) -> (gain: Double, baselin
             measured.count, longs.count)
 }
 
+/// The same, against the market (SPY): what the same dollars made in the
+/// S&P 500 over the same days, dividends included. Over market less over r
+/// is the equity premium those days paid; over market itself is skill, or
+/// luck, with beta taken as 1 (Jensen's alpha, in dollars).
+func overMarket(_ positions: [Equities_V1_Position]) -> (gain: Double, market: Double, measured: Int, of: Int)? {
+    let longs = positions.filter { $0.kind == .long }
+    let measured = longs.filter { $0.hasCost && $0.hasBaselineCost && $0.hasMarketValue && $0.baselineCost > 0 }
+    guard !measured.isEmpty else { return nil }
+    return (measured.map { $0.value + $0.dividends - $0.cost }.reduce(0, +),
+            measured.map { $0.cost * ($0.marketValue / $0.baselineCost - 1) }.reduce(0, +),
+            measured.count, longs.count)
+}
+
 /// "over r +$12.00" or "under r -$3.00".
-func againstR(_ excess: Double) -> String {
-    (excess >= 0 ? "over r " : "under r ") + (excess >= 0 ? "+" : "") + excess.formatted(.currency(code: "USD"))
+func againstR(_ excess: Double) -> String { against("r", excess) }
+
+/// "over market +$12.00" or "under market -$3.00".
+func againstMarket(_ excess: Double) -> String { against("market", excess) }
+
+private func against(_ what: String, _ excess: Double) -> String {
+    (excess >= 0 ? "over \(what) +" : "under \(what) ") + excess.formatted(.currency(code: "USD"))
 }
 
 private func dollars(_ v: Double) -> String { v.formatted(.currency(code: "USD")) }
@@ -134,6 +152,7 @@ private struct Totals: View {
     let positions: [Equities_V1_Position]
     let balance: Double
     let baseline: String
+    let market: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -160,7 +179,19 @@ private struct Totals: View {
                         .foregroundStyle(m.gain - m.baseline >= 0 ? Color.green : Color.red)
                 }
                 .font(.caption)
-                Text("Dividends and distributions on both sides, on \(m.measured) of \(m.of) positions: the ones whose buys are all in the last two years")
+                if let k = overMarket(positions) {
+                    // The market: what the same dollars made in the S&P 500.
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("\(market) would have made \(signedDollars(k.market))")
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1).minimumScaleFactor(0.75)
+                        Spacer()
+                        Text(againstMarket(k.gain - k.market)).monospacedDigit()
+                            .foregroundStyle(k.gain - k.market >= 0 ? Color.green : Color.red)
+                    }
+                    .font(.caption)
+                }
+                Text("Dividends and distributions on all sides, on \(m.measured) of \(m.of) positions: the ones whose buys are all in the last two years")
                     .font(.caption2).foregroundStyle(.secondary)
             }
         }
@@ -197,6 +228,11 @@ private struct PositionRow: View {
                     Text(againstR(m.gain - m.baseline))
                         .font(.caption2).monospacedDigit()
                         .foregroundStyle(m.gain - m.baseline >= 0 ? Color.green : Color.red)
+                }
+                if let k = overMarket([position]) {
+                    Text(againstMarket(k.gain - k.market))
+                        .font(.caption2).monospacedDigit()
+                        .foregroundStyle(k.gain - k.market >= 0 ? Color.green : Color.red)
                 }
             }
         }
