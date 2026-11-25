@@ -59,6 +59,8 @@ struct ContentView: View {
                 if let t = ProcessInfo.processInfo.environment["EQUITIES_TICKER"]?.uppercased(), tickers.contains(t) {
                     ticker = t
                 }
+            } catch where isCancellation(error) {
+                // A newer load replaces this one.
             } catch {
                 tickers = []
                 self.error = describe(error)
@@ -226,6 +228,8 @@ struct Dashboard: View {
                     currency = fetched.max { a, b in a.value.count < b.value.count }?.key ?? currency
                 }
                 data = fetched
+            } catch where isCancellation(error) {
+                // Shown again, the view loads again.
             } catch {
                 self.error = describe(error)
             }

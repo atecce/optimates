@@ -119,7 +119,12 @@ struct API {
         for (k, v) in headers { request.setValue(v, forHTTPHeaderField: k) }
         request.httpBody = try input.serializedData()
 
-        let (data, response) = try await API.session.data(for: request)
+        // In a task of its own: SwiftUI cancels a view's task when it thinks
+        // the view went away (on iPhone, while opening a company), and
+        // URLSession would drop the call half done. Finished, its result goes
+        // to whoever still waits.
+        let sent = request
+        let (data, response) = try await Task { try await API.session.data(for: sent) }.value
         let http = response as? HTTPURLResponse
         let status = http?.statusCode ?? 0
         if status == 200, http?.value(forHTTPHeaderField: "Content-Type")?.hasPrefix("application/proto") == true {
@@ -150,6 +155,11 @@ struct API {
             completionHandler(nil)
         }
     }
+}
+
+/// Whether `error` is only a cancellation: nothing to show.
+func isCancellation(_ error: Error) -> Bool {
+    error is CancellationError || (error as? URLError)?.code == .cancelled
 }
 
 /// A message for an error.
