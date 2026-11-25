@@ -430,17 +430,12 @@ struct Panel: View {
     }
     #endif
 
-    /// The chart for this system: vectorized where it can be.
-    @ViewBuilder private var chart: some View {
-        #if compiler(>=6.0)
-        if #available(iOS 18, macOS 15, *) {
-            styled(plotChart)
-        } else {
-            styled(markChart)
-        }
-        #else
+    /// The chart: one mark a point, everywhere, for now. The vectorized
+    /// plots (plotChart) merged every line of a panel into one, in one colour
+    /// (seen on the phone, 2026-11-25): separate LinePlots in a Chart are one
+    /// series unless told otherwise. Off until that's fixed and seen right.
+    private var chart: some View {
         styled(markChart)
-        #endif
     }
 
     /// What both kinds of chart share: the crosshair, the axes, the legend.
