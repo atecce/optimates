@@ -135,9 +135,9 @@ final class PortfolioTests: XCTestCase {
 
     func testGainCountsSharesAndShortsWithACost() throws {
         let (gain, cost) = try XCTUnwrap(unrealized([
-            position(.long, value: 120, cost: 100),         // +20
+            position(.long, value: 120, cost: 100),    // +20
             position(.short, value: -40, cost: -50),   // shorted at 50, now 40: +10
-            position(.long, value: 50, cost: nil),           // no cost: left out
+            position(.long, value: 50, cost: nil),     // no cost: left out
             position(.option, value: -1_000, cost: nil), // options: value only
             position(.cash, value: -500, cost: nil),
         ]))
