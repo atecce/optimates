@@ -100,6 +100,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var settings = ServerSettings.load()
     @State private var signingIn = false
+    /// The flag Panel reads: vectorized charts (iOS 18), off by default.
+    @AppStorage("vectorizedCharts") private var vectorizedCharts = false
     /// Called after saving, to load again.
     let onSave: () -> Void
 
@@ -145,6 +147,15 @@ struct SettingsView: View {
                     Text("Server")
                 } footer: {
                     Text("Empty address: \(ServerSettings.cloudflareURL). The service token, instead of signing in: equities-app, in ~/.cloudflared/equities-app.env on the Mac.")
+                }
+                Section {
+                    // Takes effect at once, without Save: the flag is the
+                    // phone's, not the server's.
+                    Toggle("Vectorized charts (iOS 18)", isOn: $vectorizedCharts)
+                } header: {
+                    Text("Experimental")
+                } footer: {
+                    Text("Draws each line as one plot instead of a mark per point: faster with long price series. New and not yet seen right on a device; if a chart looks wrong, turn it off.")
                 }
             }
             .navigationTitle("Server")

@@ -418,24 +418,40 @@ struct Panel: View {
     /// together, not one mark a point. Thousands of daily prices draw and
     /// scroll the crosshair much faster. (Built by Xcode Cloud's newer
     /// compiler only: the Mac's Xcode 15 has no LinePlot.)
+    ///
+    /// Each LinePlot names its series (foregroundStyle(by:), as the marks
+    /// do): unnamed, a panel's LinePlots were one series, joined end to start
+    /// in one colour (seen on the phone, 2026-11-25). Whether naming keeps
+    /// them apart is what the flag (`vectorizedCharts`) is there to see.
     @available(iOS 18, macOS 15, *)
     private var plotChart: some View {
         Chart {
-            ForEach(Array(series.enumerated()), id: \.element.id) { i, s in
+            ForEach(series) { s in
                 LinePlot(shown(s), x: .value("Date", \.time), y: .value("Value", \.value))
-                    .foregroundStyle(color(i))
+                    .foregroundStyle(by: .value("Series", s.name))
             }
             crosshair
         }
+        .chartForegroundStyleScale(domain: series.map(\.name), range: series.indices.map(color))
     }
     #endif
 
-    /// The chart: one mark a point, everywhere, for now. The vectorized
-    /// plots (plotChart) merged every line of a panel into one, in one colour
-    /// (seen on the phone, 2026-11-25): separate LinePlots in a Chart are one
-    /// series unless told otherwise. Off until that's fixed and seen right.
-    private var chart: some View {
+    /// Vectorized charts, a flag in Settings, off unless turned on: the Mac
+    /// can't build or show them, so they're tried on the phone first.
+    @AppStorage("vectorizedCharts") private var vectorized = false
+
+    /// The chart: one mark a point, unless the flag is on and the system has
+    /// vectorized plots.
+    @ViewBuilder private var chart: some View {
+        #if compiler(>=6.0)
+        if #available(iOS 18, macOS 15, *), vectorized {
+            styled(plotChart)
+        } else {
+            styled(markChart)
+        }
+        #else
         styled(markChart)
+        #endif
     }
 
     /// What both kinds of chart share: the crosshair, the axes, the legend.
