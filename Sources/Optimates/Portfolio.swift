@@ -78,8 +78,7 @@ struct PortfolioView: View {
         var request = Equities_V1_HoldingsRequest()
         request.refresh = refresh
         do {
-            let fresh = try await API.current().call(.holdings, request)
-            ReplyCache.shared.put("holdings", fresh)
+            let fresh = try await ReplyCache.shared.fetch("holdings", .holdings, request)
             reply = fresh
             (keptFrom, notUpdated, error) = (nil, nil, nil)
         } catch where isCancellation(error) {

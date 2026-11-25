@@ -81,6 +81,7 @@ struct FREDScreen: View {
     @State private var notUpdated: String?
     @State private var error: String?
     @State private var selected: Date?
+    @AppStorage(Pins.defaultsKey) private var pins = Pins.initial
     // The same range as the dashboards.
     @AppStorage("range") private var range = DateRange.all
     @AppStorage("rangeFrom") private var rangeFrom = Date().addingTimeInterval(-10 * 365.25 * 86_400).timeIntervalSince1970
@@ -116,6 +117,7 @@ struct FREDScreen: View {
             .padding()
         }
         .navigationTitle(title)
+        .toolbar { PinButton(key: cacheKey, pins: $pins) }
         .task {
             if data == nil, let (kept, fetched) = ReplyCache.shared.get(Equities_V1_MacroResponse.self, cacheKey) {
                 data = macroData(kept)
@@ -124,8 +126,7 @@ struct FREDScreen: View {
             var request = Equities_V1_MacroRequest()
             request.series = series
             do {
-                let reply = try await API.current().call(.macro, request)
-                ReplyCache.shared.put(cacheKey, reply)
+                let reply = try await ReplyCache.shared.fetch(cacheKey, .macro, request)
                 data = macroData(reply)
                 (keptFrom, notUpdated) = (nil, nil)
             } catch where isCancellation(error) {

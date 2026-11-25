@@ -116,15 +116,22 @@ struct API {
     }
 
     func call<Input, Output>(_ method: Method<Input, Output>, _ input: Input) async throws -> Output {
+        try Output(serializedBytes: try await raw(method.path, try input.serializedData()))
+    }
+
+    /// A call as bytes: the request message in, the reply message out. What
+    /// `call` does once typed; on its own, it replays a kept request (pinned
+    /// replies, refreshed at launch) without knowing its messages' types.
+    func raw(_ path: String, _ body: Data) async throws -> Data {
         // No credentials: Access would only send us to its login page.
         guard !headers.isEmpty else { throw APIError.signIn }
-        var request = URLRequest(url: base.appendingPathComponent(method.path), timeoutInterval: 30)
+        var request = URLRequest(url: base.appendingPathComponent(path), timeoutInterval: 30)
         request.httpMethod = "POST"
         request.setValue("application/proto", forHTTPHeaderField: "Content-Type")
         request.setValue("1", forHTTPHeaderField: "Connect-Protocol-Version")
         request.setValue("30000", forHTTPHeaderField: "Connect-Timeout-Ms")
         for (k, v) in headers { request.setValue(v, forHTTPHeaderField: k) }
-        request.httpBody = try input.serializedData()
+        request.httpBody = body
 
         // In a task of its own: SwiftUI cancels a view's task when it thinks
         // the view went away (on iPhone, while opening a company), and
@@ -135,7 +142,7 @@ struct API {
         let http = response as? HTTPURLResponse
         let status = http?.statusCode ?? 0
         if status == 200, http?.value(forHTTPHeaderField: "Content-Type")?.hasPrefix("application/proto") == true {
-            return try Output(serializedBytes: data)
+            return data
         }
         // A redirect is Access sending us to its login page (not followed:
         // see NoRedirects): the session is gone or no longer accepted.

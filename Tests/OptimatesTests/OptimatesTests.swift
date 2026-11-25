@@ -86,10 +86,32 @@ final class DateRangeTests: XCTestCase {
 /// The device's cache of replies, in memory.
 @MainActor
 final class ReplyCacheTests: XCTestCase {
-    func cache(limit: Int = 40) throws -> ReplyCache {
-        ReplyCache(container: try ModelContainer(for: CachedReply.self,
-                                                 configurations: ModelConfiguration(isStoredInMemoryOnly: true)),
-                   limit: limit)
+    func cache(limit: Int = 40, pins: String? = nil) throws -> ReplyCache {
+        // Each test its own defaults, so pins don't leak between them.
+        let defaults = UserDefaults(suiteName: "ReplyCacheTests.\(UUID().uuidString)")!
+        if let pins { defaults.set(pins, forKey: Pins.defaultsKey) }
+        return ReplyCache(container: try ModelContainer(for: CachedReply.self,
+                                                        configurations: ModelConfiguration(isStoredInMemoryOnly: true)),
+                          limit: limit, defaults: defaults)
+    }
+
+    func testPinnedRepliesAreNeverEvicted() throws {
+        let cache = try cache(limit: 1, pins: "dashboard/AAPL")
+        cache.put("dashboard/AAPL", tickers("AAPL"), fetched: utc(2020, 1, 1))  // pinned, and the oldest
+        cache.put("b", tickers("B"), fetched: utc(2026, 1, 2))
+        cache.put("c", tickers("C"))
+        XCTAssertNotNil(cache.get(Equities_V1_TickersResponse.self, "dashboard/AAPL"))
+        XCTAssertNil(cache.get(Equities_V1_TickersResponse.self, "b"))
+        XCTAssertNotNil(cache.get(Equities_V1_TickersResponse.self, "c"))
+    }
+
+    func testPinnedFromTheStart() throws {
+        XCTAssertEqual(try cache().pinned, ["dashboard/AAPL", "dashboard/NVDA", "dashboard/TSLA", "macro", "realestate", "yieldcurve"])
+    }
+
+    func testPinsToggle() {
+        XCTAssertEqual(Pins.toggled("dashboard/NVDA", in: Pins.initial), "dashboard/AAPL,dashboard/TSLA,macro,realestate,yieldcurve")
+        XCTAssertEqual(Pins.toggled("dashboard/GS", in: "macro"), "dashboard/GS,macro")
     }
 
     func tickers(_ t: String...) -> Equities_V1_TickersResponse { .with { $0.tickers = t } }

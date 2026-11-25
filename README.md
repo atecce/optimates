@@ -93,12 +93,15 @@ workflow's environment builds the pin instead.
 
 ## On the device
 
-The app keeps the API's most recent replies (the company list and the 40
-most recently opened companies) in SwiftData, in Caches: as the protobuf
+The app keeps the API's replies in SwiftData, in Application Support (out of
+backups): pinned ones (the star on each screen; π and r, real estate, the
+yield curve, AAPL, NVDA and TSLA to start with) for good, refreshed each time
+the app opens, and of the rest the 40 most recently used. Each reply is kept as the protobuf
 bytes that arrived, so the `.proto` stays the only schema. A screen shows
 what's kept at once, marked "Saved …", then replaces it with the API's
-answer; offline, what's kept stays, with why it wasn't updated. The system
-may clear Caches; signing out does.
+answer; offline, what's kept stays, with why it wasn't updated. Signing out
+clears it all. About a megabyte holds the three economic screens and three
+companies.
 
 ## Portfolio
 

@@ -74,11 +74,12 @@ struct ContentView: View {
             loading = tickers.isEmpty
             defer { loading = false }
             do {
-                let reply = try await API.current().call(.tickers, Equities_V1_TickersRequest())
-                ReplyCache.shared.put("tickers", reply)
+                let reply = try await ReplyCache.shared.fetch("tickers", .tickers, Equities_V1_TickersRequest())
                 tickers = reply.tickers
                 error = nil
                 openFromEnvironment()
+                // Through to the API: bring the pinned replies up to date.
+                await ReplyCache.shared.refreshPinned()
             } catch where isCancellation(error) {
                 // A newer load replaces this one.
             } catch {
@@ -173,6 +174,8 @@ struct Dashboard: View {
     @AppStorage("side") private var side = Side.stocks
     @AppStorage("period") private var period = FlowPeriod.quarter
     @AppStorage("range") private var range = DateRange.all
+    /// The pinned replies (Pins): this company's is "dashboard/<TICKER>".
+    @AppStorage(Pins.defaultsKey) private var pins = Pins.initial
     /// The custom range, as seconds since 1970 (what AppStorage keeps).
     @AppStorage("rangeFrom") private var rangeFrom = Date().addingTimeInterval(-10 * 365.25 * 86_400).timeIntervalSince1970
     @AppStorage("rangeTo") private var rangeTo = Date().timeIntervalSince1970
@@ -306,6 +309,7 @@ struct Dashboard: View {
                     ForEach(currencies, id: \.self) { Text($0) }
                 }
             }
+            PinButton(key: "dashboard/\(ticker.uppercased())", pins: $pins)
         }
         .task {
             // What the device kept from last time, at once; then the API's.
@@ -316,8 +320,7 @@ struct Dashboard: View {
             }
             do {
                 let request = dashboardRequest(ticker, sources: allSources, periods: [.pointInTime, .quarter, .year])
-                let reply = try await API.current().call(.dashboard, request)
-                ReplyCache.shared.put(key, reply)
+                let reply = try await ReplyCache.shared.fetch(key, .dashboard, request)
                 show(companyData(reply))
                 (keptFrom, notUpdated) = (nil, nil)
             } catch where isCancellation(error) {
