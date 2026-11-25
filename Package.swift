@@ -12,7 +12,7 @@ import PackageDescription
 
 let package = Package(
     name: "Optimates",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v14)],
     dependencies: [
         // Exact, and the same in Optimates.xcodeproj: proto.sh builds the
         // code generator from it, so generated code and runtime match.

@@ -115,6 +115,8 @@ struct Dashboard: View {
     // Kept across companies, and across launches.
     @AppStorage("side") private var side = Side.stocks
     @AppStorage("period") private var period = FlowPeriod.quarter
+    /// The crosshair, shared by every panel.
+    @State private var selected: Date?
 
     private func pit(_ item: Equities_V1_Item) -> Source { .reported(item, .pointInTime) }
     private func flow(_ item: Equities_V1_Item) -> Source { .reported(item, period.proto) }
@@ -206,7 +208,7 @@ struct Dashboard: View {
                               Series(name: name, points: data?[currency]?[source] ?? [])
                           },
                           loading: data == nil && error == nil,
-                          format: spec.format ?? .money(currency), log: spec.log)
+                          format: spec.format ?? .money(currency), log: spec.log, selected: $selected)
                 }
             }
             .padding()
@@ -249,12 +251,31 @@ enum Format {
     }
 }
 
+/// Line colours, in the order of a panel's lines: set, not left to Charts,
+/// so the values under the crosshair can wear their line's colour.
+private let palette: [Color] = [.blue, .green, .orange, .purple, .red, .teal, .pink]
+
 struct Panel: View {
     let title: String
     let series: [Series]
     let loading: Bool
     let format: Format
     var log = false
+    /// The crosshair: the date a finger is on, in any panel, shared by all of
+    /// them (Grafana's shared crosshair). nil when no finger is down.
+    @Binding var selected: Date?
+
+    /// Each line's value at the crosshair: its last point on or before it,
+    /// as a dashboard reads a quarter's figure until the next. None for a
+    /// line that ended over a year before (a delisting, a change of currency).
+    private var readout: [(name: String, color: Color, value: Double)] {
+        guard let selected else { return [] }
+        return series.enumerated().compactMap { i, s in
+            guard let p = s.points.last(where: { $0.time <= selected }),
+                  selected.timeIntervalSince(p.time) < 400 * 86_400 else { return nil }
+            return (s.name, palette[i % palette.count], p.value)
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -269,7 +290,19 @@ struct Panel: View {
                         }
                     }
                 }
+                if let selected {
+                    RuleMark(x: .value("Date", selected))
+                        .foregroundStyle(.secondary)
+                        .lineStyle(StrokeStyle(lineWidth: 1))
+                        .annotation(position: .top, spacing: 4,
+                                    overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                            Readout(date: selected, values: readout, format: format)
+                        }
+                }
             }
+            .chartForegroundStyleScale(domain: series.map(\.name),
+                                       range: series.indices.map { palette[$0 % palette.count] })
+            .chartXSelection(value: $selected)
             .chartYScale(type: log ? .log : .linear)
             .chartYAxis {
                 AxisMarks { value in
@@ -279,6 +312,40 @@ struct Panel: View {
             }
             .frame(height: 260)
             .overlay { if loading { ProgressView() } }
+        }
+    }
+}
+
+/// The values under the crosshair, as Grafana's tooltip: the date, then each
+/// line's value in its colour.
+private struct Readout: View {
+    let date: Date
+    let values: [(name: String, color: Color, value: Double)]
+    let format: Format
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(date.formatted(.dateTime.year().month(.abbreviated).day()))
+                .font(.caption.bold())
+                .foregroundStyle(Color.primary)
+            ForEach(values, id: \.name) { v in
+                HStack(spacing: 4) {
+                    Circle().fill(v.color).frame(width: 7, height: 7)
+                    Text(v.name).foregroundStyle(Color.secondary)
+                    Spacer(minLength: 8)
+                    Text(format.label(v.value)).monospacedDigit().foregroundStyle(Color.primary)
+                }
+                .font(.caption)
+            }
+        }
+        .padding(8)
+        .frame(minWidth: 150)
+        // Solid: a material has nothing to blur inside a chart, and renders black.
+        .background {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(white: 0.5).opacity(0.12))
+                .background(RoundedRectangle(cornerRadius: 8).fill(.background))
+                .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
         }
     }
 }
