@@ -94,6 +94,26 @@ enum FlowPeriod: String, CaseIterable, Identifiable {
     var proto: Equities_V1_Period { self == .quarter ? .quarter : .year }
 }
 
+/// The dates the charts show, as Grafana's time picker: the last year, five
+/// or ten, all of it, or a range of your own.
+enum DateRange: String, CaseIterable, Identifiable {
+    case year = "1Y", fiveYears = "5Y", tenYears = "10Y", all = "All", custom = "Custom"
+    var id: Self { self }
+
+    /// The dates, ending today; nil for all of them. `from` and `to` are the
+    /// custom range's.
+    func dates(from: Date, to: Date, now: Date = Date()) -> ClosedRange<Date>? {
+        let back = { (years: Int) in Calendar.current.date(byAdding: .year, value: -years, to: now)! ... now }
+        switch self {
+        case .year: return back(1)
+        case .fiveYears: return back(5)
+        case .tenYears: return back(10)
+        case .all: return nil
+        case .custom: return min(from, to) ... max(from, to)
+        }
+    }
+}
+
 /// One chart's worth: what equities.json shows in a panel.
 struct PanelSpec {
     let title: String
@@ -115,6 +135,10 @@ struct Dashboard: View {
     // Kept across companies, and across launches.
     @AppStorage("side") private var side = Side.stocks
     @AppStorage("period") private var period = FlowPeriod.quarter
+    @AppStorage("range") private var range = DateRange.all
+    /// The custom range, as seconds since 1970 (what AppStorage keeps).
+    @AppStorage("rangeFrom") private var rangeFrom = Date().addingTimeInterval(-10 * 365.25 * 86_400).timeIntervalSince1970
+    @AppStorage("rangeTo") private var rangeTo = Date().timeIntervalSince1970
     /// The crosshair, shared by every panel.
     @State private var selected: Date?
 
@@ -184,6 +208,12 @@ struct Dashboard: View {
         ], format: .percent),
     ]}
 
+    /// A stored time as a date, for a DatePicker.
+    private func date(_ seconds: Binding<Double>) -> Binding<Date> {
+        Binding(get: { Date(timeIntervalSince1970: seconds.wrappedValue) },
+                set: { seconds.wrappedValue = $0.timeIntervalSince1970 })
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -199,6 +229,18 @@ struct Dashboard: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
                 }
+                Picker("Dates", selection: $range) {
+                    ForEach(DateRange.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                if range == .custom {
+                    HStack {
+                        DatePicker("From", selection: date($rangeFrom), displayedComponents: .date)
+                        DatePicker("To", selection: date($rangeTo), displayedComponents: .date)
+                    }
+                    .font(.callout)
+                }
                 if let error {
                     Text(error).foregroundStyle(.red).font(.callout)
                 }
@@ -208,7 +250,9 @@ struct Dashboard: View {
                               Series(name: name, points: data?[currency]?[source] ?? [])
                           },
                           loading: data == nil && error == nil,
-                          format: spec.format ?? .money(currency), log: spec.log, selected: $selected)
+                          format: spec.format ?? .money(currency), log: spec.log,
+                          range: range.dates(from: Date(timeIntervalSince1970: rangeFrom), to: Date(timeIntervalSince1970: rangeTo)),
+                          selected: $selected)
                 }
             }
             .padding()
@@ -261,11 +305,28 @@ struct Panel: View {
     let loading: Bool
     let format: Format
     var log = false
+    /// The dates shown; nil for all. The axes fit what's in it.
+    var range: ClosedRange<Date>? = nil
     /// The crosshair: the date a finger is on, in any panel, shared by all of
     /// them (Grafana's shared crosshair). nil when no finger is down.
     @Binding var selected: Date?
 
-    /// Each line's value at the crosshair (`Series.value(at:)`).
+    /// The x axis: the range, or every line's dates.
+    private var xDomain: ClosedRange<Date> {
+        if let range { return range }
+        let times = series.flatMap { $0.points.map(\.time) }
+        guard let first = times.min(), let last = times.max() else { return Date() ... Date() }
+        return first ... last
+    }
+
+    /// A line's points in the range.
+    private func shown(_ s: Series) -> [Point] {
+        guard let range else { return s.points }
+        return s.points.filter { range.contains($0.time) }
+    }
+
+    /// Each line's value at the crosshair (`Series.value(at:)`), from all of
+    /// its points: a quarter reported before the range still reads inside it.
     private var readout: [(name: String, color: Color, value: Double)] {
         guard let selected else { return [] }
         return series.enumerated().compactMap { i, s in
@@ -278,7 +339,7 @@ struct Panel: View {
             Text(title).font(.headline)
             Chart {
                 ForEach(series) { s in
-                    ForEach(s.points, id: \.time) { p in
+                    ForEach(shown(s), id: \.time) { p in
                         // A log scale cannot show zero or negative values.
                         if !log || p.value > 0 {
                             LineMark(x: .value("Date", p.time), y: .value("Value", p.value))
@@ -299,6 +360,7 @@ struct Panel: View {
             .chartForegroundStyleScale(domain: series.map(\.name),
                                        range: series.indices.map { palette[$0 % palette.count] })
             .chartXSelection(value: $selected)
+            .chartXScale(domain: xDomain)
             .chartYScale(type: log ? .log : .linear)
             .chartYAxis {
                 AxisMarks { value in

@@ -66,6 +66,22 @@ final class CrosshairTests: XCTestCase {
     }
 }
 
+final class DateRangeTests: XCTestCase {
+    let now = utc(2026, 11, 25)
+
+    func testPresetsEndToday() {
+        XCTAssertEqual(DateRange.year.dates(from: now, to: now, now: now), utc(2025, 11, 25) ... now)
+        XCTAssertEqual(DateRange.tenYears.dates(from: now, to: now, now: now)?.lowerBound, utc(2016, 11, 25))
+        XCTAssertNil(DateRange.all.dates(from: now, to: now, now: now))
+    }
+
+    func testCustomInEitherOrder() {
+        let a = utc(2008, 9, 15), b = utc(2009, 3, 9)
+        XCTAssertEqual(DateRange.custom.dates(from: a, to: b, now: now), a ... b)
+        XCTAssertEqual(DateRange.custom.dates(from: b, to: a, now: now), a ... b)
+    }
+}
+
 final class ErrorTests: XCTestCase {
     func testCancellationsAreNotErrors() {
         XCTAssertTrue(isCancellation(CancellationError()))
