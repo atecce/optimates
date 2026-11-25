@@ -1,4 +1,4 @@
-import Connect
+import SwiftProtobuf
 import Foundation
 
 /// A value at a date.
@@ -42,7 +42,7 @@ func fetchCompany(_ ticker: String, sources: [Source], periods: [Equities_V1_Per
     request.items = items.sorted { $0.rawValue < $1.rawValue }
     request.market = fields.sorted { $0.rawValue < $1.rawValue }
 
-    let response = try await API.current().call { await $0.dashboard(request: request, headers: $1) }
+    let response = try await API.current().call(.dashboard, request)
     var data = CompanyData()
     for series in response.series {
         let source: Source
@@ -66,54 +66,88 @@ enum APIError: Error {
     case server(String)
 }
 
+/// A call of the .proto's `Equities` service: its path, and the message
+/// types it takes and returns, so a call can't send or expect the wrong one.
+/// One per rpc; the messages themselves are generated (proto.sh).
+struct Method<Input: SwiftProtobuf.Message, Output: SwiftProtobuf.Message> {
+    let path: String
+
+    static var tickers: Method<Equities_V1_TickersRequest, Equities_V1_TickersResponse> {
+        .init(path: "equities.v1.Equities/Tickers")
+    }
+    static var dashboard: Method<Equities_V1_DashboardRequest, Equities_V1_DashboardResponse> {
+        .init(path: "equities.v1.Equities/Dashboard")
+    }
+}
+
 /// The equities API (lib's `equities/api`), at api.atec.pub behind
-/// Cloudflare Access, over Connect. A person is let through with their
-/// Access session (`cf-access-token`), the Mac and scripts with the service
-/// token's headers.
+/// Cloudflare Access. A person is let through with their Access session
+/// (`cf-access-token`), the Mac and scripts with the service token's headers.
+///
+/// Calls are the Connect protocol's unary calls (connectrpc.com/docs/protocol):
+/// the request message POSTed as protobuf to `/<package>.<Service>/<Method>`,
+/// the reply the response message, or a status with `{"code", "message"}`.
 struct API {
-    let client: Equities_V1_EquitiesClient
-    let headers: Headers
-    let signedIn: Bool
+    let base: URL
+    let headers: [String: String]
 
     /// From the settings (the Keychain, else the environment).
     static func current() -> API {
         let s = ServerSettings.load()
-        var headers: Headers = [:]
+        var headers: [String: String] = [:]
         if let session = s.session, !session.isExpired {
-            headers["cf-access-token"] = [session.token]
+            headers["cf-access-token"] = session.token
         } else if let token = s.serviceToken {
-            headers["CF-Access-Client-Id"] = [token.id]
-            headers["CF-Access-Client-Secret"] = [token.secret]
+            headers["CF-Access-Client-Id"] = token.id
+            headers["CF-Access-Client-Secret"] = token.secret
         }
-        let config = ProtocolClientConfig(host: s.serverURL.absoluteString, networkProtocol: .connect,
-                                          codec: ProtoCodec(), timeout: 30)
-        return API(client: Equities_V1_EquitiesClient(client: ProtocolClient(config: config)),
-                   headers: headers, signedIn: !headers.isEmpty)
+        return API(base: s.serverURL, headers: headers)
     }
 
     func tickers() async throws -> [String] {
-        try await call { await $0.tickers(request: Equities_V1_TickersRequest(), headers: $1) }.tickers
+        try await call(.tickers, Equities_V1_TickersRequest()).tickers
     }
 
-    /// Make a call, its failure an APIError.
-    func call<Output>(_ rpc: (Equities_V1_EquitiesClient, Headers) async -> ResponseMessage<Output>) async throws -> Output {
+    func call<Input, Output>(_ method: Method<Input, Output>, _ input: Input) async throws -> Output {
         // No credentials: Access would only send us to its login page.
-        guard signedIn else { throw APIError.signIn }
-        let response = await rpc(client, headers)
-        switch response.result {
-        case let .success(output):
-            return output
-        case let .failure(error):
-            switch error.code {
-            // The API refusing Access's assertion, or Access's login page
-            // (a session it no longer accepts, followed to its HTML).
-            case .unauthenticated, .permissionDenied:
-                throw APIError.signIn
-            case .unknown where (error.message ?? "").contains("text/html"):
-                throw APIError.signIn
-            default:
-                throw APIError.server(error.message ?? "\(error.code)")
-            }
+        guard !headers.isEmpty else { throw APIError.signIn }
+        var request = URLRequest(url: base.appendingPathComponent(method.path), timeoutInterval: 30)
+        request.httpMethod = "POST"
+        request.setValue("application/proto", forHTTPHeaderField: "Content-Type")
+        request.setValue("1", forHTTPHeaderField: "Connect-Protocol-Version")
+        request.setValue("30000", forHTTPHeaderField: "Connect-Timeout-Ms")
+        for (k, v) in headers { request.setValue(v, forHTTPHeaderField: k) }
+        request.httpBody = try input.serializedData()
+
+        let (data, response) = try await API.session.data(for: request)
+        let http = response as? HTTPURLResponse
+        let status = http?.statusCode ?? 0
+        if status == 200, http?.value(forHTTPHeaderField: "Content-Type")?.hasPrefix("application/proto") == true {
+            return try Output(serializedBytes: data)
+        }
+        // A redirect is Access sending us to its login page (not followed:
+        // see NoRedirects): the session is gone or no longer accepted.
+        if (300..<400).contains(status) { throw APIError.signIn }
+        let error = try? JSONDecoder().decode(ConnectError.self, from: data)
+        switch error?.code {
+        case "unauthenticated", "permission_denied": throw APIError.signIn
+        case _ where status == 401 || status == 403: throw APIError.signIn
+        default: throw APIError.server(error?.message ?? "\(base.host ?? "the server"): HTTP \(status)")
+        }
+    }
+
+    /// A Connect error's body.
+    private struct ConnectError: Decodable {
+        let code: String
+        let message: String?
+    }
+
+    private static let session = URLSession(configuration: .ephemeral, delegate: NoRedirects(), delegateQueue: nil)
+
+    private final class NoRedirects: NSObject, URLSessionTaskDelegate {
+        func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                        newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+            completionHandler(nil)
         }
     }
 }

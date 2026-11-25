@@ -25,8 +25,9 @@ it, and the service checks Access's signed assertion on every request too.
 
 `Proto/equities/v1/equities.proto` is the API, the same file lib serves
 from (`equities/api/proto`). `proto.sh` copies it from a checkout of lib and
-generates `Sources/Optimates/Generated`: the messages (swift-protobuf) and
-a typed client (connect-swift). Items, periods and market fields are enums
+generates `Sources/Optimates/Generated`: the messages (swift-protobuf). The
+client is `API` in `Series.swift`, about 50 lines on URLSession: each rpc a
+`Method<Input, Output>`, so a call can only send and expect its own messages. Items, periods and market fields are enums
 (`.totalAssets`, `.quarter`, `.marketCap`), so a line the API doesn't know
 doesn't compile. Calls travel as the Connect protocol, protobuf over plain
 HTTP POST.
@@ -35,10 +36,11 @@ HTTP POST.
 ./proto.sh            # after changing the .proto in lib; commit all it writes
 ```
 
-The packages are pinned exactly, the same in `Package.swift` and
-`Optimates.xcodeproj`, and `proto.sh` builds the generators from them, so
-generated code and runtime match. connect-swift 1.2.0 and swift-protobuf
-1.34.1 are the last releases that build with Xcode 15.4 (Swift 5.10).
+swift-protobuf is the only dependency, pinned exactly, the same in
+`Package.swift` and `Optimates.xcodeproj`; `proto.sh` builds the generator
+from it, so generated code and runtime match. 1.34.1 is the last release
+that builds with Xcode 15.4 (Swift 5.10). `proto.sh` needs protoc 3.15 or
+later (`brew install protobuf`).
 
 ## Signing in
 
