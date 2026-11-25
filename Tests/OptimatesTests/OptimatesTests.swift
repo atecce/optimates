@@ -208,12 +208,24 @@ final class MacroTests: XCTestCase {
 
 /// The portfolio against its r.
 final class BaselineTests: XCTestCase {
-    func long(value: Double, cost: Double, baselineCost: Double?, baselineValue: Double?) -> Equities_V1_Position {
+    func long(value: Double, cost: Double, baselineCost: Double?, baselineValue: Double?, dividends: Double? = nil) -> Equities_V1_Position {
         .with { p in
             p.kind = .long; p.value = value; p.cost = cost
             if let baselineCost { p.baselineCost = baselineCost }
             if let baselineValue { p.baselineValue = baselineValue }
+            if let dividends { p.dividends = dividends }
         }
+    }
+
+    func testDividendsAndTheBrokeragesCost() throws {
+        // Shares bought for $1,000 by exercising a call that cost $500: the
+        // brokerage's cost is $1,500. Worth $1,450 now, with $50 of dividends:
+        // return 0. MINT grew 4% over the buys' days: on $1,500, +$60.
+        let m = try XCTUnwrap(overBaseline([long(value: 1_450, cost: 1_500, baselineCost: 1_000, baselineValue: 1_040, dividends: 50)]))
+        XCTAssertEqual(m.gain, 0, accuracy: 1e-9)
+        XCTAssertEqual(m.baseline, 60, accuracy: 1e-9)
+        XCTAssertEqual(againstR(m.gain - m.baseline), "under r -$60.00")
+        XCTAssertEqual(againstR(12), "over r +$12.00")
     }
 
     func testOverBaselineCountsOnlyMeasuredLongs() throws {

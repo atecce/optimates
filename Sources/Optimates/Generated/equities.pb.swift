@@ -880,9 +880,9 @@ struct Equities_V1_Position: Sendable {
 
   /// The baseline: the dollars that bought the shares still held, put into
   /// the baseline (HoldingsResponse.baseline) on the same days instead, and
-  /// what they'd be worth now. Gain over r is (value - cost) minus
-  /// (baseline_value - baseline_cost). Unset when the buys on record (Plaid's
-  /// two years) don't account for every share, and for shorts, options, cash.
+  /// what they'd be worth now (its total return, distributions included).
+  /// Unset when the buys on record (Plaid's two years) don't account for
+  /// every share, and for shorts, options, cash.
   var baselineCost: Double {
     get {_baselineCost ?? 0}
     set {_baselineCost = newValue}
@@ -901,6 +901,20 @@ struct Equities_V1_Position: Sendable {
   /// Clears the value of `baselineValue`. Subsequent reads from it will return its default value.
   mutating func clearBaselineValue() {self._baselineValue = nil}
 
+  /// Cash dividends on the security in this account since the oldest of
+  /// those buys: money in, positive. Set with the baseline. Both sides then
+  /// count their payouts: the position's total return is value + dividends -
+  /// baseline_cost, the baseline's baseline_value - baseline_cost, and the
+  /// gain over r (under r when negative) is value + dividends - baseline_value.
+  var dividends: Double {
+    get {_dividends ?? 0}
+    set {_dividends = newValue}
+  }
+  /// Returns true if `dividends` has been explicitly set.
+  var hasDividends: Bool {self._dividends != nil}
+  /// Clears the value of `dividends`. Subsequent reads from it will return its default value.
+  mutating func clearDividends() {self._dividends = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -908,6 +922,7 @@ struct Equities_V1_Position: Sendable {
   fileprivate var _cost: Double? = nil
   fileprivate var _baselineCost: Double? = nil
   fileprivate var _baselineValue: Double? = nil
+  fileprivate var _dividends: Double? = nil
 }
 
 struct Equities_V1_MacroRequest: Sendable {
@@ -1371,7 +1386,7 @@ extension Equities_V1_Account: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
 
 extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Position"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ticker\0\u{1}name\0\u{1}kind\0\u{1}quantity\0\u{1}price\0\u{1}value\0\u{1}cost\0\u{3}cost_source\0\u{3}price_epoch_day\0\u{3}baseline_cost\0\u{3}baseline_value\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ticker\0\u{1}name\0\u{1}kind\0\u{1}quantity\0\u{1}price\0\u{1}value\0\u{1}cost\0\u{3}cost_source\0\u{3}price_epoch_day\0\u{3}baseline_cost\0\u{3}baseline_value\0\u{1}dividends\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1390,6 +1405,7 @@ extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
       case 9: try { try decoder.decodeSingularInt32Field(value: &self.priceEpochDay) }()
       case 10: try { try decoder.decodeSingularDoubleField(value: &self._baselineCost) }()
       case 11: try { try decoder.decodeSingularDoubleField(value: &self._baselineValue) }()
+      case 12: try { try decoder.decodeSingularDoubleField(value: &self._dividends) }()
       default: break
       }
     }
@@ -1433,6 +1449,9 @@ extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
     try { if let v = self._baselineValue {
       try visitor.visitSingularDoubleField(value: v, fieldNumber: 11)
     } }()
+    try { if let v = self._dividends {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 12)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1448,6 +1467,7 @@ extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
     if lhs.priceEpochDay != rhs.priceEpochDay {return false}
     if lhs._baselineCost != rhs._baselineCost {return false}
     if lhs._baselineValue != rhs._baselineValue {return false}
+    if lhs._dividends != rhs._dividends {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

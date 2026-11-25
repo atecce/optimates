@@ -99,16 +99,27 @@ func unrealized(_ positions: [Equities_V1_Position]) -> (gain: Double, cost: Dou
 }
 
 /// Long positions measured against the baseline (the portfolio's r, MINT):
-/// their gain, what the same dollars made in the baseline over the same
-/// days, and how many of the long positions that covers (buys older than
-/// Plaid's two years can't be measured).
+/// their total return, dividends included, against what the baseline made
+/// over the same days, distributions included; and how many of the long
+/// positions that covers (buys older than Plaid's two years can't be
+/// measured).
+///
+/// Both on the brokerage's cost: it holds every dollar the position took,
+/// premiums of exercised options and wash-sale adjustments too, which the
+/// buys alone miss. The baseline's growth over the buys' days is applied to
+/// it, as if those dollars went in when the shares were bought.
 func overBaseline(_ positions: [Equities_V1_Position]) -> (gain: Double, baseline: Double, measured: Int, of: Int)? {
     let longs = positions.filter { $0.kind == .long }
-    let measured = longs.filter { $0.hasCost && $0.hasBaselineCost && $0.hasBaselineValue }
+    let measured = longs.filter { $0.hasCost && $0.hasBaselineCost && $0.hasBaselineValue && $0.baselineCost > 0 }
     guard !measured.isEmpty else { return nil }
-    return (measured.map { $0.value - $0.cost }.reduce(0, +),
-            measured.map { $0.baselineValue - $0.baselineCost }.reduce(0, +),
+    return (measured.map { $0.value + $0.dividends - $0.cost }.reduce(0, +),
+            measured.map { $0.cost * ($0.baselineValue / $0.baselineCost - 1) }.reduce(0, +),
             measured.count, longs.count)
+}
+
+/// "over r +$12.00" or "under r -$3.00".
+func againstR(_ excess: Double) -> String {
+    (excess >= 0 ? "over r " : "under r ") + (excess >= 0 ? "+" : "") + excess.formatted(.currency(code: "USD"))
 }
 
 private func dollars(_ v: Double) -> String { v.formatted(.currency(code: "USD")) }
@@ -143,12 +154,13 @@ private struct Totals: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text("\(baseline) would have made \(signedDollars(m.baseline))")
                         .foregroundStyle(.secondary)
+                        .lineLimit(1).minimumScaleFactor(0.75)
                     Spacer()
-                    Text("over r " + signedDollars(m.gain - m.baseline)).monospacedDigit()
+                    Text(againstR(m.gain - m.baseline)).monospacedDigit()
                         .foregroundStyle(m.gain - m.baseline >= 0 ? Color.green : Color.red)
                 }
                 .font(.caption)
-                Text("on \(m.measured) of \(m.of) positions: the ones whose buys are all in the last two years")
+                Text("Dividends and distributions on both sides, on \(m.measured) of \(m.of) positions: the ones whose buys are all in the last two years")
                     .font(.caption2).foregroundStyle(.secondary)
             }
         }
@@ -182,7 +194,7 @@ private struct PositionRow: View {
                         .foregroundStyle(gain >= 0 ? Color.green : Color.red)
                 }
                 if let m = overBaseline([position]) {
-                    Text("over r " + signedDollars(m.gain - m.baseline))
+                    Text(againstR(m.gain - m.baseline))
                         .font(.caption2).monospacedDigit()
                         .foregroundStyle(m.gain - m.baseline >= 0 ? Color.green : Color.red)
                 }
