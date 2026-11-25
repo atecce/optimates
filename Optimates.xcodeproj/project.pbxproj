@@ -11,6 +11,7 @@
 		E0000000000000000000A002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B002 /* ContentView.swift */; };
 		E0000000000000000000A003 /* Series.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B003 /* Series.swift */; };
 		E0000000000000000000A005 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B005 /* Settings.swift */; };
+		E0000000000000000000A007 /* AccessLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B007 /* AccessLogin.swift */; };
 		E0000000000000000000A004 /* Library in Frameworks */ = {isa = PBXBuildFile; productRef = E0000000000000000000C002 /* Library */; };
 		E0000000000000000000A006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B006 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
@@ -20,6 +21,7 @@
 		E0000000000000000000B002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		E0000000000000000000B003 /* Series.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Series.swift; sourceTree = "<group>"; };
 		E0000000000000000000B005 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
+		E0000000000000000000B007 /* AccessLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessLogin.swift; sourceTree = "<group>"; };
 		E0000000000000000000B004 /* Optimates.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Optimates.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E0000000000000000000B006 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -52,6 +54,7 @@
 				E0000000000000000000B002 /* ContentView.swift */,
 				E0000000000000000000B003 /* Series.swift */,
 				E0000000000000000000B005 /* Settings.swift */,
+				E0000000000000000000B007 /* AccessLogin.swift */,
 			);
 			path = Sources/Optimates;
 			sourceTree = "<group>";
@@ -146,6 +149,7 @@
 				E0000000000000000000A002 /* ContentView.swift in Sources */,
 				E0000000000000000000A003 /* Series.swift in Sources */,
 				E0000000000000000000A005 /* Settings.swift in Sources */,
+				E0000000000000000000A007 /* AccessLogin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

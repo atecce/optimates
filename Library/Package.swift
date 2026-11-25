@@ -19,9 +19,9 @@ let package = Package(
     targets: [
         .binaryTarget(
             name: "bibleFFI",
-            // Library/release.sh in atecce/lib, library-20261124-ea6c256 (ea6c256a8f81f81b3266d2f5d7b215ce3e7fa213)
-            url: "https://github.com/atecce/lib/releases/download/library-20261124-ea6c256/bibleFFI.xcframework.zip",
-            checksum: "7098b41a0102f3aac48ebcae80c36ad33878676de43d0203e3b8afce0716c326"
+            // release-library.sh in atecce/lib, library-20261124-ec0112e (ec0112e9fd7496dd0d318ea2542d7eed8bee299e)
+            url: "https://github.com/atecce/lib/releases/download/library-20261124-ec0112e/bibleFFI.xcframework.zip",
+            checksum: "47154db6f88b2c70a1a1e6ba34d9021478aa4e34cffe65089594dec0582a030a"
         ),
         .target(
             name: "Library",

@@ -54,6 +54,7 @@ func describe(_ error: Error) -> String {
     switch error {
     case InfluxError.NoToken: return "No InfluxDB token: set one in Server settings, or run from a shell that has sourced ~/.profile."
     case let InfluxError.Query(message): return message
+    case InfluxError.SignIn: return "Sign in to Cloudflare Access: Server settings, Sign in with email."
     default: return error.localizedDescription
     }
 }

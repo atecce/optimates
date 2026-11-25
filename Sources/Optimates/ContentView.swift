@@ -63,7 +63,10 @@ struct ContentView: View {
                 tickers = []
                 self.error = describe(error)
                 // Nothing configured, as on a new phone: ask.
-                if case InfluxError.NoToken = error { showSettings = true }
+                switch error {
+                case InfluxError.NoToken, InfluxError.SignIn: showSettings = true
+                default: break
+                }
             }
         }
     }

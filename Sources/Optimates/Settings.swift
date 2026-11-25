@@ -6,23 +6,36 @@ import SwiftUI
 /// Where InfluxDB is and the tokens to reach it, kept in the Keychain. Empty
 /// settings mean the environment's (INFLUXDB3_AUTH_TOKEN and so on, as
 /// `swift run` and simulator.sh pass them); a phone needs them set here.
+///
+/// Through Cloudflare, a person signs in to Access (accessToken, from
+/// AccessLoginView); the Mac and scripts use Access's service token instead.
 struct ServerSettings: Equatable {
     var url = ""
     var token = ""
     var accessClientId = ""
     var accessClientSecret = ""
+    var accessToken = ""
 
     /// Through Cloudflare (tunnel/README.md), from anywhere.
     static let cloudflareURL = "https://influx.atec.pub"
 
     var isEmpty: Bool { token.isEmpty }
 
+    /// The server's address, or the Cloudflare one when empty.
+    var serverURL: URL {
+        if let u = URL(string: url.trimmingCharacters(in: .whitespacesAndNewlines)), u.host != nil { return u }
+        return URL(string: Self.cloudflareURL)!
+    }
+
+    var session: AccessSession? { accessToken.isEmpty ? nil : AccessSession(token: accessToken) }
+
     static func load() -> ServerSettings {
         ServerSettings(
             url: Keychain.get("url") ?? "",
             token: Keychain.get("token") ?? "",
             accessClientId: Keychain.get("accessClientId") ?? "",
-            accessClientSecret: Keychain.get("accessClientSecret") ?? "")
+            accessClientSecret: Keychain.get("accessClientSecret") ?? "",
+            accessToken: Keychain.get("accessToken") ?? "")
     }
 
     func save() {
@@ -30,6 +43,7 @@ struct ServerSettings: Equatable {
         Keychain.set("token", token)
         Keychain.set("accessClientId", accessClientId)
         Keychain.set("accessClientSecret", accessClientSecret)
+        Keychain.set("accessToken", accessToken)
     }
 
     /// Point the Rust client at this server, or back at the environment.
@@ -46,7 +60,8 @@ struct ServerSettings: Equatable {
             url: trimmed(url) ?? Self.cloudflareURL,
             token: token.trimmingCharacters(in: .whitespacesAndNewlines),
             accessClientId: trimmed(accessClientId),
-            accessClientSecret: trimmed(accessClientSecret)))
+            accessClientSecret: trimmed(accessClientSecret),
+            accessToken: trimmed(accessToken)))
     }
 }
 
@@ -83,12 +98,30 @@ enum Keychain {
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var settings = ServerSettings.load()
+    @State private var signingIn = false
     /// Called after saving, to reload with the new server.
     let onSave: () -> Void
 
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    if let session = settings.session, !session.isExpired {
+                        LabeledContent("Signed in as", value: session.email ?? "unknown")
+                        if let expires = session.expires {
+                            LabeledContent("Until", value: expires.formatted(date: .abbreviated, time: .shortened))
+                        }
+                        Button("Sign out", role: .destructive) { settings.accessToken = "" }
+                    } else {
+                        Button(settings.session == nil ? "Sign in with email" : "Session expired: sign in again") {
+                            signingIn = true
+                        }
+                    }
+                } header: {
+                    Text("Cloudflare Access")
+                } footer: {
+                    Text("Your email and a one-time code from Cloudflare, for \(settings.serverURL.host ?? "the server").")
+                }
                 Section {
                     TextField(ServerSettings.cloudflareURL, text: $settings.url)
                         .autocorrectionDisabled()
@@ -103,16 +136,16 @@ struct SettingsView: View {
                     Text("Empty address: \(ServerSettings.cloudflareURL). Empty token: the environment's, as from swift run or simulator.sh.")
                 }
                 Section {
-                    TextField("client ID", text: $settings.accessClientId)
-                        .autocorrectionDisabled()
-                        #if os(iOS)
-                        .textInputAutocapitalization(.never)
-                        #endif
-                    SecureField("client secret", text: $settings.accessClientSecret)
-                } header: {
-                    Text("Cloudflare Access service token")
+                    DisclosureGroup("Service token (Mac and scripts)") {
+                        TextField("client ID", text: $settings.accessClientId)
+                            .autocorrectionDisabled()
+                            #if os(iOS)
+                            .textInputAutocapitalization(.never)
+                            #endif
+                        SecureField("client secret", text: $settings.accessClientSecret)
+                    }
                 } footer: {
-                    Text("For a server behind Cloudflare Access: equities-app, in ~/.cloudflared/equities-app.env on the Mac.")
+                    Text("Instead of signing in: equities-app, in ~/.cloudflared/equities-app.env on the Mac.")
                 }
             }
             .navigationTitle("Server")
@@ -129,9 +162,16 @@ struct SettingsView: View {
                     }
                 }
             }
+            .sheet(isPresented: $signingIn) {
+                AccessLoginView(url: settings.serverURL) { token in
+                    // Kept at once: a sign-in shouldn't be lost to Cancel.
+                    settings.accessToken = token
+                    Keychain.set("accessToken", token)
+                }
+            }
         }
         #if os(macOS)
-        .frame(minWidth: 460, minHeight: 360)
+        .frame(minWidth: 460, minHeight: 420)
         #endif
     }
 }
