@@ -198,6 +198,13 @@ final class MacroTests: XCTestCase {
         XCTAssertTrue(taylorRule(inflation: [p(2026, 6, 3)], gap: [p(2026, 7, 1)], rStar: 2).isEmpty)
     }
 
+    func testTaylorWithAChangingRStar() {
+        // π 3, gap 1: with r* 2 from July, 0.5 from September: 6, then 4.5.
+        let rule = taylorRule(inflation: [p(2026, 8, 3), p(2026, 9, 3)], gap: [p(2026, 7, 1)],
+                              rStar: [p(2026, 7, 2), p(2026, 9, 0.5)])
+        XCTAssertEqual(rule.map(\.value), [6, 4.5])
+    }
+
     func testUnemploymentGap() {
         let gap = difference([p(2026, 9, 4.1), p(2026, 10, 4.3)], [p(2026, 7, 4.2)])
         // Unemployment against CBO's natural rate, read as of each month.

@@ -42,9 +42,16 @@ func difference(_ a: [Point], _ b: [Point]) -> [Point] {
 /// Taylor's rule (1993): i = r* + π + ½(π − π*) + ½·gap, at the inflation
 /// series' dates, the gap read as of each. Taylor's own r* was 2 and π* 2.
 func taylorRule(inflation: [Point], gap: [Point], rStar: Double, target: Double = 2) -> [Point] {
-    let g = Series(name: "", points: gap)
+    taylorRule(inflation: inflation, gap: gap, rStar: inflation.map { Point(time: $0.time, value: rStar) }, target: target)
+}
+
+/// The same with r* changing over time (the New York Fed's estimates, read
+/// as of each date): Taylor's rule as the Fed's own staff would write it now.
+func taylorRule(inflation: [Point], gap: [Point], rStar: [Point], target: Double = 2) -> [Point] {
+    let g = Series(name: "", points: gap), r = Series(name: "", points: rStar)
     return inflation.compactMap { p in
-        g.value(at: p.time).map { Point(time: p.time, value: rStar + p.value + 0.5 * (p.value - target) + 0.5 * $0) }
+        guard let gap = g.value(at: p.time), let rStar = r.value(at: p.time) else { return nil }
+        return Point(time: p.time, value: rStar + p.value + 0.5 * (p.value - target) + 0.5 * gap)
     }
 }
 
@@ -134,8 +141,9 @@ struct MacroView: View {
         FREDScreen(title: "π and r", cacheKey: "macro",
                    series: ["PCEPILFE", "PCEPI", "CPIAUCSL", "EXPINF1YR", "MICH",
                             "FEDFUNDS", "GS10", "FII10", "T10YIEM",
-                            "GDPC1", "GDPPOT", "UNRATE", "NROU"],
-                   source: "BEA, BLS, CBO, the Fed, the Cleveland Fed, the University of Michigan") { d in
+                            "GDPC1", "GDPPOT", "UNRATE", "NROU",
+                            "HLW_RSTAR_US", "HLW_RSTAR_CA", "HLW_RSTAR_EA"],
+                   source: "BEA, BLS, CBO, the Fed, the Cleveland Fed, the University of Michigan; r*, the New York Fed (Holston, Laubach and Williams)") { d in
             let s = { (id: String) in d[id] ?? [] }
             let corePCE = yearOverYear(s("PCEPILFE"))
             let gap = percentGap(s("GDPC1"), s("GDPPOT"))
@@ -151,6 +159,15 @@ struct MacroView: View {
                     Series(name: "fed funds", points: s("FEDFUNDS")),
                     Series(name: "Taylor, r* 2 (1993)", points: taylorRule(inflation: corePCE, gap: gap, rStar: 2)),
                     Series(name: "Taylor, r* 0.5", points: taylorRule(inflation: corePCE, gap: gap, rStar: 0.5)),
+                    Series(name: "Taylor, r* the New York Fed's", points: taylorRule(inflation: corePCE, gap: gap, rStar: s("HLW_RSTAR_US"))),
+                ]),
+                // Wicksell's two rates: the natural one, and the market's.
+                FREDPanel(title: "r*, the natural rate, and the real rates (%)", lines: [
+                    Series(name: "r*, US", points: s("HLW_RSTAR_US")),
+                    Series(name: "r*, Canada", points: s("HLW_RSTAR_CA")),
+                    Series(name: "r*, euro area", points: s("HLW_RSTAR_EA")),
+                    Series(name: "real fed funds (less core PCE)", points: difference(s("FEDFUNDS"), corePCE)),
+                    Series(name: "10-year TIPS", points: s("FII10")),
                 ]),
                 FREDPanel(title: "10 years: nominal, real, expected inflation (%)", lines: [
                     Series(name: "Treasury", points: s("GS10")),
