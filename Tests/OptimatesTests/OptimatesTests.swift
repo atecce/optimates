@@ -361,3 +361,28 @@ final class YieldCurveTests: XCTestCase {
         XCTAssertEqual(c.curve(near: utc(2030, 1, 1))?.points.map(\.label), ["3m", "1y", "2y", "5y", "10y", "30y"])
     }
 }
+
+/// The surface asks for a yield at thousands of points a draw: it must be cheap.
+final class YieldSurfaceCostTests: XCTestCase {
+    func testTenThousandSamplesOfFiftyYears() {
+        // 50 years of monthly curves.
+        var data: [String: [Point]] = [:]
+        let cal = Calendar(identifier: .gregorian)
+        let months = (0..<600).map { cal.date(byAdding: .month, value: $0, to: utc(1977, 1, 1))! }
+        for (k, m) in YieldCurve.maturities.enumerated() {
+            data[m.id] = months.enumerated().map { Point(time: $1, value: Double(k) + Double($0 % 12) / 10) }
+        }
+        let curve = YieldCurve(data)
+        let start = Date()
+        var total = 0.0
+        for i in 0..<100 {
+            for j in 0..<100 {
+                let z = curve.firstYear + (curve.lastYear - curve.firstYear) * Double(j) / 99
+                total += curve.yield(position: 5 * Double(i) / 99, month: curve.month(nearest: z))
+            }
+        }
+        let seconds = Date().timeIntervalSince(start)
+        XCTAssertGreaterThan(total, 0)
+        XCTAssertLessThan(seconds, 0.1, "10,000 samples took \(seconds) s")
+    }
+}

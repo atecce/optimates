@@ -5,15 +5,18 @@ import SwiftUI
 /// The Treasury yield curve by month: the constant-maturity yields FRED
 /// keeps monthly (the 3-month bill, then 1, 2, 5, 10 and 30 years), for the
 /// months that have all of them (February 1977 on, the 30-year's start).
-struct YieldCurve {
+struct YieldCurve: Equatable {
     /// FRED's series, the maturity in years, and its label.
     static let maturities: [(id: String, years: Double, label: String)] = [
         ("TB3MS", 0.25, "3m"), ("GS1", 1, "1y"), ("GS2", 2, "2y"),
         ("GS5", 5, "5y"), ("GS10", 10, "10y"), ("GS30", 30, "30y"),
     ]
 
-    /// The months, oldest first, and each month's yields, by maturity.
+    /// The months, oldest first, each as a fractional year (computed once:
+    /// the surface asks for the nearest month thousands of times a draw), and
+    /// each month's yields, by maturity.
     let months: [Date]
+    let years: [Double]
     let yields: [[Double]]
 
     init(_ data: [String: [Point]]) {
@@ -22,6 +25,7 @@ struct YieldCurve {
         }
         let common = byID.dropFirst().reduce(Set(byID.first?.keys ?? [:].keys)) { $0.intersection($1.keys) }
         months = common.sorted()
+        years = months.map(Self.year)
         yields = months.map { month in byID.map { $0[month]! } }
     }
 
@@ -33,14 +37,13 @@ struct YieldCurve {
         return Double(c.year!) + Double(c.month! - 1) / 12
     }
 
-    var firstYear: Double { months.first.map(Self.year) ?? 0 }
-    var lastYear: Double { months.last.map(Self.year) ?? 0 }
+    var firstYear: Double { years.first ?? 0 }
+    var lastYear: Double { years.last ?? 0 }
 
-    /// The month nearest a fractional year, by search: the months aren't
-    /// contiguous (no 30-year yields 2002–2006, so no full curve then).
+    /// The month nearest a fractional year, by binary search: the months
+    /// aren't contiguous (no 30-year yields 2002–2006, so no full curve then).
     func month(nearest year: Double) -> Int {
-        guard !months.isEmpty else { return 0 }
-        let years = months.map(Self.year)
+        guard !years.isEmpty else { return 0 }
         let i = years.partitionPoint { $0 < year }
         if i == 0 { return 0 }
         if i == years.count { return years.count - 1 }
@@ -75,7 +78,7 @@ struct YieldCurveView: View {
         FREDScreen(title: "Yield curve", cacheKey: "yieldcurve",
                    series: YieldCurve.maturities.map(\.id),
                    source: "the Federal Reserve Board (H.15)",
-                   header: { data in AnyView(YieldCurveCharts(curve: YieldCurve(data))) }) { d in
+                   header: { data in AnyView(YieldCurveCharts(curve: YieldCurve(data)).equatable()) }) { d in
             [FREDPanel(title: "10-year less 3-month (percentage points; below zero, inverted)", lines: [
                 Series(name: "10-year less 3-month", points: difference(d["GS10"] ?? [], d["TB3MS"] ?? [])),
             ])]
@@ -84,7 +87,11 @@ struct YieldCurveView: View {
 }
 
 /// The surface and the curves, above the screen's panels.
-private struct YieldCurveCharts: View {
+/// Equatable, and compared (`.equatable()` where it's made): the screen
+/// redraws whenever its state changes (the crosshair, the range), and the
+/// surface is the expensive part, so it's drawn again only when the curve
+/// itself is different.
+private struct YieldCurveCharts: View, Equatable {
     let curve: YieldCurve
 
     /// The dates the curves are drawn at: now, a year and five years before,
