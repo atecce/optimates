@@ -12,6 +12,7 @@
 		E0000000000000000000A003 /* Series.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B003 /* Series.swift */; };
 		E0000000000000000000A005 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B005 /* Settings.swift */; };
 		E0000000000000000000A004 /* Library in Frameworks */ = {isa = PBXBuildFile; productRef = E0000000000000000000C002 /* Library */; };
+		E0000000000000000000A006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B006 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -20,6 +21,7 @@
 		E0000000000000000000B003 /* Series.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Series.swift; sourceTree = "<group>"; };
 		E0000000000000000000B005 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		E0000000000000000000B004 /* Optimates.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Optimates.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E0000000000000000000B006 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -38,6 +40,7 @@
 			isa = PBXGroup;
 			children = (
 				E0000000000000000000E002 /* Sources/Optimates */,
+				E0000000000000000000E004 /* Resources */,
 				E0000000000000000000E003 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -51,6 +54,14 @@
 				E0000000000000000000B005 /* Settings.swift */,
 			);
 			path = Sources/Optimates;
+			sourceTree = "<group>";
+		};
+		E0000000000000000000E004 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				E0000000000000000000B006 /* Assets.xcassets */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		E0000000000000000000E003 /* Products */ = {
@@ -70,6 +81,7 @@
 			buildPhases = (
 				E0000000000000000000D002 /* Sources */,
 				E0000000000000000000D001 /* Frameworks */,
+				E0000000000000000000D003 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -114,6 +126,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		E0000000000000000000D003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E0000000000000000000A006 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		E0000000000000000000D002 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -157,6 +180,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Y82E2K77P5;
 				GENERATE_INFOPLIST_FILE = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = Optimates;
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Optimates reads its data from InfluxDB on your Mac.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -173,7 +198,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -184,6 +209,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Y82E2K77P5;
 				GENERATE_INFOPLIST_FILE = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = Optimates;
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Optimates reads its data from InfluxDB on your Mac.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -200,7 +227,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
