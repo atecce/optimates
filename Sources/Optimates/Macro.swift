@@ -72,6 +72,8 @@ struct FREDScreen: View {
     let series: [String]
     /// Who publishes the data, for the footnote.
     let source: String
+    /// Charts of the screen's own, above its panels, once data is in.
+    var header: ((_ data: [String: [Point]]) -> AnyView)? = nil
     let panels: (_ data: [String: [Point]]) -> [FREDPanel]
 
     @State private var data: [String: [Point]]?
@@ -98,6 +100,9 @@ struct FREDScreen: View {
                 if let keptFrom {
                     Text("Saved \(keptFrom.formatted(.relative(presentation: .named)))" + (notUpdated.map { ": not updated, " + $0 } ?? ", updating…"))
                         .font(.caption).foregroundStyle(.secondary)
+                }
+                if let header, let data {
+                    header(data)
                 }
                 ForEach(panels(data ?? [:]), id: \.title) { panel in
                     Panel(title: panel.title, series: panel.lines, loading: data == nil && error == nil,

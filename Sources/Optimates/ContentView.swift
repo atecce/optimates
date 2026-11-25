@@ -23,6 +23,7 @@ struct ContentView: View {
                     Label("Portfolio", systemImage: "chart.pie").tag(PortfolioView.tag)
                     Label("π and r", systemImage: "percent").tag(MacroView.tag)
                     Label("Real estate", systemImage: "house").tag(RealEstateView.tag)
+                    Label("Yield curve", systemImage: "chart.line.uptrend.xyaxis").tag(YieldCurveView.tag)
                 }
                 ForEach(filtered, id: \.self) { Text($0.uppercased()).tag($0) }
             }
@@ -53,6 +54,8 @@ struct ContentView: View {
                 MacroView()
             } else if ticker == RealEstateView.tag {
                 RealEstateView()
+            } else if ticker == YieldCurveView.tag {
+                YieldCurveView()
             } else if let ticker {
                 Dashboard(ticker: ticker).id(ticker)
             } else {
@@ -98,6 +101,7 @@ struct ContentView: View {
         case "PORTFOLIO": ticker = PortfolioView.tag
         case "MACRO": ticker = MacroView.tag
         case "REALESTATE": ticker = RealEstateView.tag
+        case "YIELDCURVE": ticker = YieldCurveView.tag
         default: if tickers.contains(t) { ticker = t }
         }
     }

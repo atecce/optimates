@@ -294,3 +294,48 @@ final class RealEstateTests: XCTestCase {
         XCTAssertEqual(r[1].value, 100 * (200.0 / 75) / (100.0 / 50), accuracy: 1e-9)
     }
 }
+
+/// The yield curve's grid and the surface's interpolation.
+final class YieldCurveTests: XCTestCase {
+    func p(_ y: Int, _ m: Int, _ v: Double) -> Point { Point(time: utc(y, m, 1), value: v) }
+
+    func curve() -> YieldCurve {
+        // Two months; the 30-year starts in the second, so only it has all six.
+        YieldCurve([
+            "TB3MS": [p(2026, 1, 4), p(2026, 2, 4.4)], "GS1": [p(2026, 1, 4), p(2026, 2, 4.2)],
+            "GS2": [p(2026, 1, 4), p(2026, 2, 4.0)], "GS5": [p(2026, 1, 4), p(2026, 2, 4.3)],
+            "GS10": [p(2026, 1, 4), p(2026, 2, 4.9)], "GS30": [p(2026, 2, 5.1)],
+        ])
+    }
+
+    func testOnlyMonthsWithEveryMaturity() {
+        let c = curve()
+        XCTAssertEqual(c.months, [utc(2026, 2, 1)])
+        XCTAssertEqual(c.yields[0], [4.4, 4.2, 4.0, 4.3, 4.9, 5.1])
+    }
+
+    func testInterpolatesBetweenMaturities() {
+        let c = curve()
+        XCTAssertEqual(c.yield(position: 0, month: 0), 4.4, accuracy: 1e-9)
+        XCTAssertEqual(c.yield(position: 4.5, month: 0), 5.0, accuracy: 1e-9)   // halfway 10y to 30y
+        XCTAssertEqual(c.yield(position: 9, month: 0), 5.1, accuracy: 1e-9)     // past the end: the 30-year
+    }
+
+    func testNearestMonthAcrossAGap() {
+        // Months with a gap (2002-2006 had no 30-year): June 2007 is found by
+        // date, not by counting months from the first.
+        let months = [utc(2001, 12, 1), utc(2007, 5, 1), utc(2007, 6, 1)]
+        var data: [String: [Point]] = [:]
+        for m in YieldCurve.maturities { data[m.id] = months.map { Point(time: $0, value: 4) } }
+        let c = YieldCurve(data)
+        XCTAssertEqual(c.months[c.month(nearest: YieldCurve.year(utc(2007, 6, 1)))], utc(2007, 6, 1))
+        XCTAssertEqual(c.months[c.month(nearest: 2004)], utc(2001, 12, 1))
+    }
+
+    func testNearestMonth() {
+        let c = curve()
+        XCTAssertEqual(YieldCurve.year(utc(2026, 2, 1)), 2026 + 1.0 / 12, accuracy: 1e-9)
+        XCTAssertEqual(c.month(nearest: 1990), 0)
+        XCTAssertEqual(c.curve(near: utc(2030, 1, 1))?.points.map(\.label), ["3m", "1y", "2y", "5y", "10y", "30y"])
+    }
+}
