@@ -171,3 +171,37 @@ func bytes(_ hex: String) -> Data {
     let digits = Array(hex.replacingOccurrences(of: " ", with: ""))
     return Data(stride(from: 0, to: digits.count, by: 2).map { UInt8(String(digits[$0...$0 + 1]), radix: 16)! })
 }
+
+/// The macro panels' arithmetic.
+final class MacroTests: XCTestCase {
+    func p(_ y: Int, _ m: Int, _ v: Double) -> Point { Point(time: utc(y, m, 1), value: v) }
+
+    func testYearOverYear() {
+        let index = [p(2025, 1, 100), p(2025, 2, 101), p(2026, 1, 103), p(2026, 2, 102.01)]
+        let yoy = yearOverYear(index)
+        XCTAssertEqual(yoy.map(\.time), [utc(2026, 1, 1), utc(2026, 2, 1)])
+        XCTAssertEqual(yoy[0].value, 3, accuracy: 1e-9)
+        XCTAssertEqual(yoy[1].value, 1, accuracy: 1e-9)
+    }
+
+    func testOutputGap() {
+        let gap = percentGap([p(2026, 7, 102), p(2026, 10, 99)], [p(2026, 7, 100), p(2026, 10, 100)])
+        XCTAssertEqual(gap[0].value, 2, accuracy: 1e-9)
+        XCTAssertEqual(gap[1].value, -1, accuracy: 1e-9)
+    }
+
+    func testTaylor1993() {
+        // π 3, gap 1 (the latest quarter's, for each month): 2 + 3 + ½·1 + ½·1 = 6.
+        let rule = taylorRule(inflation: [p(2026, 8, 3), p(2026, 9, 3)], gap: [p(2026, 7, 1)], rStar: 2)
+        XCTAssertEqual(rule.map(\.value), [6, 6])
+        // Before any gap: no rule.
+        XCTAssertTrue(taylorRule(inflation: [p(2026, 6, 3)], gap: [p(2026, 7, 1)], rStar: 2).isEmpty)
+    }
+
+    func testUnemploymentGap() {
+        let gap = difference([p(2026, 9, 4.1), p(2026, 10, 4.3)], [p(2026, 7, 4.2)])
+        // Unemployment against CBO's natural rate, read as of each month.
+        XCTAssertEqual(gap[0].value, -0.1, accuracy: 1e-9)
+        XCTAssertEqual(gap[1].value, 0.1, accuracy: 1e-9)
+    }
+}

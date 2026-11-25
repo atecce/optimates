@@ -86,6 +86,9 @@ struct Method<Input: SwiftProtobuf.Message, Output: SwiftProtobuf.Message> {
     static var holdings: Method<Equities_V1_HoldingsRequest, Equities_V1_HoldingsResponse> {
         .init(path: "equities.v1.Equities/Holdings")
     }
+    static var macro: Method<Equities_V1_MacroRequest, Equities_V1_MacroResponse> {
+        .init(path: "equities.v1.Equities/Macro")
+    }
 }
 
 /// The equities API (lib's `equities/api`), at api.atec.pub behind

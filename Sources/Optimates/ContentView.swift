@@ -21,6 +21,7 @@ struct ContentView: View {
             List(selection: $ticker) {
                 if search.isEmpty {
                     Label("Portfolio", systemImage: "chart.pie").tag(PortfolioView.tag)
+                    Label("π and r", systemImage: "percent").tag(MacroView.tag)
                 }
                 ForEach(filtered, id: \.self) { Text($0.uppercased()).tag($0) }
             }
@@ -47,6 +48,8 @@ struct ContentView: View {
         } detail: {
             if ticker == PortfolioView.tag {
                 PortfolioView()
+            } else if ticker == MacroView.tag {
+                MacroView()
             } else if let ticker {
                 Dashboard(ticker: ticker).id(ticker)
             } else {
@@ -85,10 +88,14 @@ struct ContentView: View {
     }
 
     /// EQUITIES_TICKER=aapl opens a company at launch (simulator.sh), and
-    /// EQUITIES_TICKER=portfolio the portfolio.
+    /// EQUITIES_TICKER=portfolio the portfolio, EQUITIES_TICKER=macro π and r.
     private func openFromEnvironment() {
         guard ticker == nil, let t = ProcessInfo.processInfo.environment["EQUITIES_TICKER"]?.uppercased() else { return }
-        if t == "PORTFOLIO" { ticker = PortfolioView.tag } else if tickers.contains(t) { ticker = t }
+        switch t {
+        case "PORTFOLIO": ticker = PortfolioView.tag
+        case "MACRO": ticker = MacroView.tag
+        default: if tickers.contains(t) { ticker = t }
+        }
     }
 
     private var filtered: [String] {
@@ -324,13 +331,16 @@ struct Dashboard: View {
 }
 
 enum Format {
-    case money(String), ratio, percent
+    /// `percent` for fractions (0.03), `points` for values already in percent
+    /// (3, as FRED publishes rates).
+    case money(String), ratio, percent, points
 
     func label(_ v: Double) -> String {
         switch self {
         case let .money(code): return "\(code) " + v.formatted(.number.notation(.compactName))
         case .ratio: return v.formatted(.number.precision(.fractionLength(0...1)))
         case .percent: return v.formatted(.percent.precision(.fractionLength(0)))
+        case .points: return v.formatted(.number.precision(.fractionLength(0...1))) + "%"
         }
     }
 }

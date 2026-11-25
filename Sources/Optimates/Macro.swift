@@ -1,0 +1,154 @@
+import Foundation
+import SwiftUI
+
+// What the macro panels compute from FRED's series: inflation over a year,
+// the output gap, the Taylor rule. The API serves the series as published;
+// the arithmetic is here, with its tests.
+
+private let utcCalendar: Calendar = {
+    var c = Calendar(identifier: .gregorian)
+    c.timeZone = TimeZone(identifier: "UTC")!
+    return c
+}()
+
+/// Percent change over twelve months, for an index (CPI, PCE): each point
+/// against the one a year before it, where there is one.
+func yearOverYear(_ points: [Point]) -> [Point] {
+    let byDate = Dictionary(points.map { ($0.time, $0.value) }, uniquingKeysWith: { a, _ in a })
+    return points.compactMap { p in
+        guard let earlier = utcCalendar.date(byAdding: .year, value: -1, to: p.time),
+              let before = byDate[earlier], before != 0 else { return nil }
+        return Point(time: p.time, value: 100 * (p.value / before - 1))
+    }
+}
+
+/// `actual` against `potential`, in percent of potential, where both have
+/// the date: the output gap, from real GDP and CBO's potential.
+func percentGap(_ actual: [Point], _ potential: [Point]) -> [Point] {
+    let byDate = Dictionary(potential.map { ($0.time, $0.value) }, uniquingKeysWith: { a, _ in a })
+    return actual.compactMap { p in
+        guard let pot = byDate[p.time], pot != 0 else { return nil }
+        return Point(time: p.time, value: 100 * (p.value / pot - 1))
+    }
+}
+
+/// `a - b` at `a`'s dates, `b` read as of each (its last value on or
+/// before): unemployment against its natural rate.
+func difference(_ a: [Point], _ b: [Point]) -> [Point] {
+    let other = Series(name: "", points: b)
+    return a.compactMap { p in other.value(at: p.time).map { Point(time: p.time, value: p.value - $0) } }
+}
+
+/// Taylor's rule (1993): i = r* + π + ½(π − π*) + ½·gap, at the inflation
+/// series' dates, the gap read as of each. Taylor's own r* was 2 and π* 2.
+func taylorRule(inflation: [Point], gap: [Point], rStar: Double, target: Double = 2) -> [Point] {
+    let g = Series(name: "", points: gap)
+    return inflation.compactMap { p in
+        g.value(at: p.time).map { Point(time: p.time, value: rStar + p.value + 0.5 * (p.value - target) + 0.5 * $0) }
+    }
+}
+
+/// The FRED series the macro screen reads.
+private let macroSeries = ["PCEPILFE", "PCEPI", "CPIAUCSL", "EXPINF1YR", "MICH",
+                           "FEDFUNDS", "GS10", "FII10", "T10YIEM",
+                           "GDPC1", "GDPPOT", "UNRATE", "NROU"]
+
+/// π and r: inflation, the policy rate against Taylor's rule, nominal and
+/// real rates, and the gaps, from FRED (the API's Macro).
+struct MacroView: View {
+    /// The sidebar's tag for this screen.
+    static let tag = "★ macro"
+
+    @State private var data: [String: [Point]]?
+    @State private var keptFrom: Date?
+    @State private var notUpdated: String?
+    @State private var error: String?
+    @State private var selected: Date?
+    // The same range as the dashboards.
+    @AppStorage("range") private var range = DateRange.all
+    @AppStorage("rangeFrom") private var rangeFrom = Date().addingTimeInterval(-10 * 365.25 * 86_400).timeIntervalSince1970
+    @AppStorage("rangeTo") private var rangeTo = Date().timeIntervalSince1970
+
+    private func s(_ id: String) -> [Point] { data?[id] ?? [] }
+
+    private var panels: [(title: String, lines: [Series])] {
+        let corePCE = yearOverYear(s("PCEPILFE"))
+        let gap = percentGap(s("GDPC1"), s("GDPPOT"))
+        return [
+            ("inflation, over a year (%)", [
+                Series(name: "core PCE", points: corePCE),
+                Series(name: "PCE", points: yearOverYear(s("PCEPI"))),
+                Series(name: "CPI", points: yearOverYear(s("CPIAUCSL"))),
+                Series(name: "expected, 1 year (Cleveland Fed)", points: s("EXPINF1YR")),
+                Series(name: "expected, households (Michigan)", points: s("MICH")),
+            ]),
+            ("the policy rate and Taylor's rule (%)", [
+                Series(name: "fed funds", points: s("FEDFUNDS")),
+                Series(name: "Taylor, r* 2 (1993)", points: taylorRule(inflation: corePCE, gap: gap, rStar: 2)),
+                Series(name: "Taylor, r* 0.5", points: taylorRule(inflation: corePCE, gap: gap, rStar: 0.5)),
+            ]),
+            ("10 years: nominal, real, expected inflation (%)", [
+                Series(name: "Treasury", points: s("GS10")),
+                Series(name: "TIPS (real)", points: s("FII10")),
+                Series(name: "breakeven inflation", points: s("T10YIEM")),
+            ]),
+            ("the gaps (percentage points)", [
+                Series(name: "output gap (GDP vs CBO potential, %)", points: gap),
+                Series(name: "unemployment vs its natural rate", points: difference(s("UNRATE"), s("NROU"))),
+            ]),
+        ]
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                Picker("Dates", selection: $range) {
+                    ForEach(DateRange.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                if let error {
+                    Text(error).foregroundStyle(.red).font(.callout)
+                }
+                if let keptFrom {
+                    Text("Saved \(keptFrom.formatted(.relative(presentation: .named)))" + (notUpdated.map { ": not updated, " + $0 } ?? ", updating…"))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                ForEach(panels, id: \.title) { panel in
+                    Panel(title: panel.title, series: panel.lines, loading: data == nil && error == nil,
+                          format: .points,
+                          range: range.dates(from: Date(timeIntervalSince1970: rangeFrom), to: Date(timeIntervalSince1970: rangeTo)),
+                          selected: $selected)
+                }
+                Text("FRED (St. Louis Fed): BEA, BLS, CBO, the Fed, the Cleveland Fed, the University of Michigan.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            .padding()
+        }
+        .navigationTitle("π and r")
+        .task {
+            if data == nil, let (kept, fetched) = ReplyCache.shared.get(Equities_V1_MacroResponse.self, "macro") {
+                data = macroData(kept)
+                keptFrom = fetched
+            }
+            var request = Equities_V1_MacroRequest()
+            request.series = macroSeries
+            do {
+                let reply = try await API.current().call(.macro, request)
+                ReplyCache.shared.put("macro", reply)
+                data = macroData(reply)
+                (keptFrom, notUpdated) = (nil, nil)
+            } catch where isCancellation(error) {
+            } catch {
+                if data == nil { self.error = describe(error) } else { notUpdated = describe(error) }
+            }
+        }
+    }
+}
+
+/// A Macro reply by series ID, its days as dates.
+func macroData(_ reply: Equities_V1_MacroResponse) -> [String: [Point]] {
+    Dictionary(reply.series.map { s in
+        (s.id, s.points.map { Point(time: Date(timeIntervalSince1970: TimeInterval($0.epochDay) * 86_400), value: $0.value) })
+    }, uniquingKeysWith: { a, _ in a })
+}

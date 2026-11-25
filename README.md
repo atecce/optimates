@@ -107,3 +107,11 @@ At the top of the company list: the owner's brokerage accounts (lib's
 gain, and the totals. Shorts gain as their price falls; options are shown by
 value only, for now. Pull to refresh syncs with the brokerage. Only the owner
 sees it: the API refuses everyone else, family included.
+
+## π and r
+
+Below the portfolio: inflation (core PCE, PCE, CPI over a year, and expected
+inflation, Cleveland Fed and Michigan), the fed funds rate against Taylor's
+rule (r* 2, as in 1993, and 0.5), the 10-year Treasury against TIPS and
+breakeven inflation, and the output and unemployment gaps (CBO). From FRED,
+through the API's `Macro`; the arithmetic (`Macro.swift`) is tested.
