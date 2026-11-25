@@ -18,7 +18,12 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(filtered, id: \.self, selection: $ticker) { Text($0.uppercased()) }
+            List(selection: $ticker) {
+                if search.isEmpty {
+                    Label("Portfolio", systemImage: "chart.pie").tag(PortfolioView.tag)
+                }
+                ForEach(filtered, id: \.self) { Text($0.uppercased()).tag($0) }
+            }
                 .searchable(text: $search, placement: .sidebar)
                 .navigationSplitViewColumnWidth(min: 120, ideal: 150)
                 // In the list, so a phone shows it too (its detail pane is
@@ -40,7 +45,9 @@ struct ContentView: View {
                     }
                 }
         } detail: {
-            if let ticker {
+            if ticker == PortfolioView.tag {
+                PortfolioView()
+            } else if let ticker {
                 Dashboard(ticker: ticker).id(ticker)
             } else {
                 Text("Choose a company").foregroundStyle(.secondary)
@@ -77,11 +84,11 @@ struct ContentView: View {
         }
     }
 
-    /// EQUITIES_TICKER=aapl opens a company at launch (simulator.sh).
+    /// EQUITIES_TICKER=aapl opens a company at launch (simulator.sh), and
+    /// EQUITIES_TICKER=portfolio the portfolio.
     private func openFromEnvironment() {
-        if ticker == nil, let t = ProcessInfo.processInfo.environment["EQUITIES_TICKER"]?.uppercased(), tickers.contains(t) {
-            ticker = t
-        }
+        guard ticker == nil, let t = ProcessInfo.processInfo.environment["EQUITIES_TICKER"]?.uppercased() else { return }
+        if t == "PORTFOLIO" { ticker = PortfolioView.tag } else if tickers.contains(t) { ticker = t }
     }
 
     private var filtered: [String] {

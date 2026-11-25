@@ -560,6 +560,103 @@ enum Equities_V1_Item: SwiftProtobuf.Enum, Swift.CaseIterable {
 
 }
 
+enum Equities_V1_PositionKind: SwiftProtobuf.Enum, Swift.CaseIterable {
+  typealias RawValue = Int
+  case unspecified // = 0
+
+  /// Shares, funds, crypto held.
+  case long // = 1
+
+  /// Shares sold short.
+  case short // = 2
+
+  /// An option contract, long or short: its value only, for now.
+  case option // = 3
+
+  /// Cash; negative for a margin debit.
+  case cash // = 4
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .unspecified
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unspecified
+    case 1: self = .long
+    case 2: self = .short
+    case 3: self = .option
+    case 4: self = .cash
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .unspecified: return 0
+    case .long: return 1
+    case .short: return 2
+    case .option: return 3
+    case .cash: return 4
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static let allCases: [Equities_V1_PositionKind] = [
+    .unspecified,
+    .long,
+    .short,
+    .option,
+    .cash,
+  ]
+
+}
+
+enum Equities_V1_CostSource: SwiftProtobuf.Enum, Swift.CaseIterable {
+  typealias RawValue = Int
+  case unspecified // = 0
+
+  /// The institution's cost basis.
+  case institution // = 1
+
+  /// The proceeds of the short sales still open (the newest ones: earlier
+  /// ones were covered first).
+  case shortSales // = 2
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .unspecified
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unspecified
+    case 1: self = .institution
+    case 2: self = .shortSales
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .unspecified: return 0
+    case .institution: return 1
+    case .shortSales: return 2
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static let allCases: [Equities_V1_CostSource] = [
+    .unspecified,
+    .institution,
+    .shortSales,
+  ]
+
+}
+
 struct Equities_V1_TickersRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -688,6 +785,100 @@ struct Equities_V1_Point: Sendable {
   init() {}
 }
 
+struct Equities_V1_HoldingsRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Sync with the brokerage first, unless that was in the last 15 minutes.
+  var refresh: Bool = false
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Equities_V1_HoldingsResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var accounts: [Equities_V1_Account] = []
+
+  /// When the brokerage was last synced: seconds since 1970.
+  var syncedUnix: Int64 = 0
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Equities_V1_Account: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var institution: String = String()
+
+  var name: String = String()
+
+  /// As the institution says: "ira", "brokerage", "crypto exchange".
+  var subtype: String = String()
+
+  /// What the account is worth, as the institution reports it.
+  var balance: Double = 0
+
+  var positions: [Equities_V1_Position] = []
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Equities_V1_Position: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var ticker: String = String()
+
+  var name: String = String()
+
+  var kind: Equities_V1_PositionKind = .unspecified
+
+  /// Negative for a short.
+  var quantity: Double = 0
+
+  /// Per share; per contract (x100) for an option.
+  var price: Double = 0
+
+  /// quantity x price: negative for a short or a margin debit.
+  var value: Double = 0
+
+  /// What the position cost, so value - cost is its unrealized gain; for a
+  /// short, minus what the short sales brought in. Unset when not known, and
+  /// for options and cash.
+  var cost: Double {
+    get {_cost ?? 0}
+    set {_cost = newValue}
+  }
+  /// Returns true if `cost` has been explicitly set.
+  var hasCost: Bool {self._cost != nil}
+  /// Clears the value of `cost`. Subsequent reads from it will return its default value.
+  mutating func clearCost() {self._cost = nil}
+
+  var costSource: Equities_V1_CostSource = .unspecified
+
+  /// The day of the price: days since 1970-01-01.
+  var priceEpochDay: Int32 = 0
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _cost: Double? = nil
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "equities.v1"
@@ -702,6 +893,14 @@ extension Equities_V1_MarketField: SwiftProtobuf._ProtoNameProviding {
 
 extension Equities_V1_Item: SwiftProtobuf._ProtoNameProviding {
   static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ITEM_UNSPECIFIED\0\u{1}ITEM_CASH_AND_CASH_EQUIVALENTS\0\u{1}ITEM_MARKETABLE_SECURITIES\0\u{1}ITEM_ACCOUNTS_RECEIVABLE_NET\0\u{1}ITEM_VENDOR_NON_TRADE_RECEIVABLES\0\u{1}ITEM_INVENTORIES\0\u{1}ITEM_PREPAID_EXPENSES_AND_OTHER_CURRENT_ASSETS\0\u{1}ITEM_OTHER_CURRENT_ASSETS\0\u{1}ITEM_TOTAL_CURRENT_ASSETS\0\u{1}ITEM_OPERATING_LEASE_VEHICLES_NET\0\u{1}ITEM_FINANCE_RECEIVABLES_CURRENT\0\u{1}ITEM_FINANCE_RECEIVABLES_NON_CURRENT\0\u{1}ITEM_SOLAR_ENERGY_SYSTEMS_NET\0\u{1}ITEM_PROPERTY_AND_EQUIPMENT_NET\0\u{1}ITEM_OPERATING_LEASE_ASSETS\0\u{1}ITEM_GOODWILL\0\u{1}ITEM_DIGITAL_ASSETS\0\u{1}ITEM_INTANGIBLE_ASSETS_NET\0\u{1}ITEM_DEFERRED_INCOME_TAX_ASSETS\0\u{1}ITEM_NON_MARKETABLE_EQUITY_SECURITIES\0\u{1}ITEM_OTHER_ASSETS\0\u{1}ITEM_TOTAL_NON_CURRENT_ASSETS\0\u{1}ITEM_TOTAL_ASSETS\0\u{1}ITEM_ACCOUNTS_PAYABLE\0\u{1}ITEM_ACCRUED_AND_OTHER_CURRENT_LIABILITIES\0\u{1}ITEM_DEFERRED_REVENUE\0\u{1}ITEM_SHORT_TERM_DEBT\0\u{1}ITEM_COMMERCIAL_PAPER\0\u{1}ITEM_TERM_DEBT\0\u{1}ITEM_OTHER_CURRENT_LIABILITIES\0\u{1}ITEM_TOTAL_CURRENT_LIABILITIES\0\u{1}ITEM_LONG_TERM_DEBT\0\u{1}ITEM_DEBT_AND_FINANCE_LEASES_NET_OF_CURRENT_PORTION\0\u{1}ITEM_DEFERRED_REVENUE_NET_OF_CURRENT_PORTION\0\u{1}ITEM_LONG_TERM_OPERATING_LEASE_LIABILITIES\0\u{1}ITEM_OTHER_LONG_TERM_LIABILITIES\0\u{1}ITEM_OTHER_NON_CURRENT_LIABILITIES\0\u{1}ITEM_TOTAL_NON_CURRENT_LIABILITIES\0\u{1}ITEM_TOTAL_LIABILITIES\0\u{1}ITEM_TOTAL_DEBT\0\u{1}ITEM_AUTOMOTIVE_DEBT\0\u{1}ITEM_FINANCIAL_SERVICES_DEBT\0\u{1}ITEM_STOCKHOLDERS_EQUITY\0\u{1}ITEM_AUTOMOTIVE_REVENUE\0\u{1}ITEM_FINANCIAL_SERVICES_REVENUE\0\u{1}ITEM_REGULATORY_CREDITS_REVENUE\0\u{1}ITEM_REVENUE\0\u{1}ITEM_COST_OF_REVENUE\0\u{1}ITEM_GROSS_PROFIT\0\u{1}ITEM_RESEARCH_AND_DEVELOPMENT\0\u{1}ITEM_SALES_GENERAL_AND_ADMINISTRATIVE\0\u{1}ITEM_RESTRUCTURING_AND_OTHER\0\u{1}ITEM_TOTAL_OPERATING_EXPENSES\0\u{1}ITEM_OPERATING_INCOME\0\u{1}ITEM_ORDINARY_INCOME\0\u{1}ITEM_INTEREST_INCOME\0\u{1}ITEM_INTEREST_EXPENSE\0\u{1}ITEM_OTHER_INCOME_NET\0\u{1}ITEM_TOTAL_OTHER_INCOME_NET\0\u{1}ITEM_INCOME_BEFORE_INCOME_TAX\0\u{1}ITEM_INCOME_TAX_EXPENSE\0\u{1}ITEM_NET_INCOME\0\u{1}ITEM_EARNINGS_PER_SHARE_BASIC\0\u{1}ITEM_EARNINGS_PER_SHARE_DILUTED\0\u{1}ITEM_SHARES_OUTSTANDING\0\u{1}ITEM_BOOK_VALUE_PER_SHARE\0\u{1}ITEM_WEIGHTED_AVERAGE_SHARES_BASIC\0\u{1}ITEM_WEIGHTED_AVERAGE_SHARES_DILUTED\0\u{1}ITEM_STOCK_BASED_COMPENSATION_EXPENSE\0\u{1}ITEM_DEPRECIATION_AND_AMORITIZATION\0\u{1}ITEM_DEFERRED_INCOME_TAXES\0\u{1}ITEM_GAINS_ON_NON_MARKETABLE_EQUITY_SECURITIES_AND_PUBLICLY_HELD_SECURITIES_NET\0\u{1}ITEM_OTHER\0\u{1}ITEM_ACCOUNTS_RECEIVABLE\0\u{1}ITEM_CHANGE_IN_INVENTORIES\0\u{1}ITEM_PREPAID_EXPENSES_AND_OTHER_ASSETS\0\u{1}ITEM_CHANGE_IN_ACCOUNTS_PAYABLE\0\u{1}ITEM_CHANGE_IN_ACCRUED_AND_OTHER_CURRENT_LIABILITIES\0\u{1}ITEM_CHANGE_IN_OTHER_LONG_TERM_LIABILITIES\0\u{1}ITEM_NET_CASH_PROVIDED_BY_OPERATING_ACTIVITIES\0\u{1}ITEM_PROCEEDS_FROM_MATURITIES_OF_MARKETABLE_SECURITIES\0\u{1}ITEM_PROCEEDS_FROM_SALES_OF_MARKETABLE_SECURITIES\0\u{1}ITEM_PROCEEDS_FROM_SALES_OF_NON_MARKETABLE_EQUITY_SECURITIES\0\u{1}ITEM_PURCHASES_OF_MARKETABLE_SECURITIES\0\u{1}ITEM_PURCHASES_RELATED_TO_PROPERTY_AND_EQUIPMENT_AND_INTANGIBLE_ASSETS\0\u{1}ITEM_PURCHASES_OF_NON_MARKETABLE_EQUITY_SECURITIES\0\u{1}ITEM_ACQUISITIONS_NET_OF_CASH_ACQUIRED\0\u{1}ITEM_NET_CASH_USED_IN_INVESTING_ACTIVITIES\0\u{1}ITEM_NET_CASH_USED_IN_FINANCING_ACTIVITIES\0\u{1}ITEM_PROCEEDS_RELATED_TO_EMPLOYEE_STOCK_PLANS\0\u{1}ITEM_PAYMENTS_RELATED_TO_REPURCHASES_OF_COMMON_STOCK\0\u{1}ITEM_PAYMENTS_RELATED_TO_EMPLOYEE_STOCK_PLAN_TAXES\0\u{1}ITEM_DIVIDENDS_PAID\0\u{1}ITEM_PRINCIPAL_PAYMENTS_ON_PROPERTY_AND_EQUIPMENT_AND_INTANGIBLE_ASSETS\0\u{1}ITEM_REPAYMENT_OF_DEBT\0\u{1}ITEM_CHANGE_IN_CASH_AND_CASH_EQUIVALENTS\0")
+}
+
+extension Equities_V1_PositionKind: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0POSITION_KIND_UNSPECIFIED\0\u{1}POSITION_KIND_LONG\0\u{1}POSITION_KIND_SHORT\0\u{1}POSITION_KIND_OPTION\0\u{1}POSITION_KIND_CASH\0")
+}
+
+extension Equities_V1_CostSource: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0COST_SOURCE_UNSPECIFIED\0\u{1}COST_SOURCE_INSTITUTION\0\u{1}COST_SOURCE_SHORT_SALES\0")
 }
 
 extension Equities_V1_TickersRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
@@ -965,6 +1164,195 @@ extension Equities_V1_Point: SwiftProtobuf.Message, SwiftProtobuf._MessageImplem
   static func ==(lhs: Equities_V1_Point, rhs: Equities_V1_Point) -> Bool {
     if lhs.epochDay != rhs.epochDay {return false}
     if lhs.value != rhs.value {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Equities_V1_HoldingsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".HoldingsRequest"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}refresh\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.refresh) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.refresh != false {
+      try visitor.visitSingularBoolField(value: self.refresh, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Equities_V1_HoldingsRequest, rhs: Equities_V1_HoldingsRequest) -> Bool {
+    if lhs.refresh != rhs.refresh {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".HoldingsResponse"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}accounts\0\u{3}synced_unix\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.accounts) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.syncedUnix) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.accounts.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.accounts, fieldNumber: 1)
+    }
+    if self.syncedUnix != 0 {
+      try visitor.visitSingularInt64Field(value: self.syncedUnix, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Equities_V1_HoldingsResponse, rhs: Equities_V1_HoldingsResponse) -> Bool {
+    if lhs.accounts != rhs.accounts {return false}
+    if lhs.syncedUnix != rhs.syncedUnix {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Equities_V1_Account: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".Account"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}institution\0\u{1}name\0\u{1}subtype\0\u{1}balance\0\u{1}positions\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.institution) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.subtype) }()
+      case 4: try { try decoder.decodeSingularDoubleField(value: &self.balance) }()
+      case 5: try { try decoder.decodeRepeatedMessageField(value: &self.positions) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.institution.isEmpty {
+      try visitor.visitSingularStringField(value: self.institution, fieldNumber: 1)
+    }
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
+    }
+    if !self.subtype.isEmpty {
+      try visitor.visitSingularStringField(value: self.subtype, fieldNumber: 3)
+    }
+    if self.balance.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.balance, fieldNumber: 4)
+    }
+    if !self.positions.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.positions, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Equities_V1_Account, rhs: Equities_V1_Account) -> Bool {
+    if lhs.institution != rhs.institution {return false}
+    if lhs.name != rhs.name {return false}
+    if lhs.subtype != rhs.subtype {return false}
+    if lhs.balance != rhs.balance {return false}
+    if lhs.positions != rhs.positions {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".Position"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ticker\0\u{1}name\0\u{1}kind\0\u{1}quantity\0\u{1}price\0\u{1}value\0\u{1}cost\0\u{3}cost_source\0\u{3}price_epoch_day\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.ticker) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 3: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
+      case 4: try { try decoder.decodeSingularDoubleField(value: &self.quantity) }()
+      case 5: try { try decoder.decodeSingularDoubleField(value: &self.price) }()
+      case 6: try { try decoder.decodeSingularDoubleField(value: &self.value) }()
+      case 7: try { try decoder.decodeSingularDoubleField(value: &self._cost) }()
+      case 8: try { try decoder.decodeSingularEnumField(value: &self.costSource) }()
+      case 9: try { try decoder.decodeSingularInt32Field(value: &self.priceEpochDay) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.ticker.isEmpty {
+      try visitor.visitSingularStringField(value: self.ticker, fieldNumber: 1)
+    }
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
+    }
+    if self.kind != .unspecified {
+      try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 3)
+    }
+    if self.quantity.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.quantity, fieldNumber: 4)
+    }
+    if self.price.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.price, fieldNumber: 5)
+    }
+    if self.value.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.value, fieldNumber: 6)
+    }
+    try { if let v = self._cost {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 7)
+    } }()
+    if self.costSource != .unspecified {
+      try visitor.visitSingularEnumField(value: self.costSource, fieldNumber: 8)
+    }
+    if self.priceEpochDay != 0 {
+      try visitor.visitSingularInt32Field(value: self.priceEpochDay, fieldNumber: 9)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Equities_V1_Position, rhs: Equities_V1_Position) -> Bool {
+    if lhs.ticker != rhs.ticker {return false}
+    if lhs.name != rhs.name {return false}
+    if lhs.kind != rhs.kind {return false}
+    if lhs.quantity != rhs.quantity {return false}
+    if lhs.price != rhs.price {return false}
+    if lhs.value != rhs.value {return false}
+    if lhs._cost != rhs._cost {return false}
+    if lhs.costSource != rhs.costSource {return false}
+    if lhs.priceEpochDay != rhs.priceEpochDay {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

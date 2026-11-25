@@ -12,6 +12,7 @@ Sources/Optimates/     the SwiftUI sources, shared by both
 Proto/                 the API's contract, equities.proto, copied from lib
 proto.sh               copy the .proto from lib and generate the Swift
 Sources/Optimates/Cache.swift  the most recently used replies, on the device (SwiftData)
+Sources/Optimates/Portfolio.swift  the owner's brokerage holdings and unrealized gains
 Tests/OptimatesTests/  the contract (golden bytes, shared with lib) and the charts' logic
 ci_scripts/            Xcode Cloud: build with the newest swift-protobuf
 simulator.sh           build and run the iOS app in the Simulator
@@ -98,3 +99,11 @@ bytes that arrived, so the `.proto` stays the only schema. A screen shows
 what's kept at once, marked "Saved …", then replaces it with the API's
 answer; offline, what's kept stays, with why it wasn't updated. The system
 may clear Caches; signing out does.
+
+## Portfolio
+
+At the top of the company list: the owner's brokerage accounts (lib's
+`plaid`, through the API's `Holdings`), each position's value and unrealized
+gain, and the totals. Shorts gain as their price falls; options are shown by
+value only, for now. Pull to refresh syncs with the brokerage. Only the owner
+sees it: the API refuses everyone else, family included.

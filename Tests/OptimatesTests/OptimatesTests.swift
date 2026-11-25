@@ -128,6 +128,28 @@ final class ReplyCacheTests: XCTestCase {
     }
 }
 
+final class PortfolioTests: XCTestCase {
+    func position(_ kind: Equities_V1_PositionKind, value: Double, cost: Double?) -> Equities_V1_Position {
+        .with { p in p.kind = kind; p.value = value; if let cost { p.cost = cost } }
+    }
+
+    func testGainCountsSharesAndShortsWithACost() throws {
+        let (gain, cost) = try XCTUnwrap(unrealized([
+            position(.long, value: 120, cost: 100),         // +20
+            position(.short, value: -40, cost: -50),   // shorted at 50, now 40: +10
+            position(.long, value: 50, cost: nil),           // no cost: left out
+            position(.option, value: -1_000, cost: nil), // options: value only
+            position(.cash, value: -500, cost: nil),
+        ]))
+        XCTAssertEqual(gain, 30, accuracy: 1e-9)
+        XCTAssertEqual(cost, 150, accuracy: 1e-9)
+    }
+
+    func testNoGainWithoutACost() {
+        XCTAssertNil(unrealized([position(.option, value: 900, cost: 1_200)]))
+    }
+}
+
 final class ErrorTests: XCTestCase {
     func testCancellationsAreNotErrors() {
         XCTAssertTrue(isCancellation(CancellationError()))
