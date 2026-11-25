@@ -260,3 +260,30 @@ final class MarketTests: XCTestCase {
         XCTAssertNil(overMarket([.with { $0.kind = .long; $0.value = 1; $0.cost = 1; $0.baselineCost = 1 }]))
     }
 }
+
+/// The real-estate panels' arithmetic.
+final class RealEstateTests: XCTestCase {
+    func p(_ y: Int, _ m: Int, _ v: Double) -> Point { Point(time: utc(y, m, 1), value: v) }
+
+    func testMonthlyPayment() {
+        // $100,000 at 6% for 30 years: the textbook $599.55.
+        XCTAssertEqual(monthlyPayment(principal: 100_000, annualRate: 6), 599.55, accuracy: 0.01)
+        // At 0%, principal over the months.
+        XCTAssertEqual(monthlyPayment(principal: 36_000, annualRate: 0), 100, accuracy: 1e-9)
+    }
+
+    func testMedianPaymentUsesTheRateOfTheDay() {
+        // A $250,000 house, 20% down, at 6% then 7%.
+        let pay = medianPayment(prices: [p(2026, 1, 250_000), p(2026, 4, 250_000)],
+                                rates: [p(2025, 12, 6), p(2026, 3, 7)])
+        XCTAssertEqual(pay[0].value, monthlyPayment(principal: 200_000, annualRate: 6), accuracy: 1e-9)
+        XCTAssertEqual(pay[1].value, monthlyPayment(principal: 200_000, annualRate: 7), accuracy: 1e-9)
+    }
+
+    func testPriceToRent() {
+        // Prices double while rents rise half as much: the ratio rises a third.
+        let r = ratioIndex([p(2020, 1, 100), p(2025, 1, 200)], [p(2020, 1, 50), p(2025, 1, 75)])
+        XCTAssertEqual(r[0].value, 100, accuracy: 1e-9)
+        XCTAssertEqual(r[1].value, 100 * (200.0 / 75) / (100.0 / 50), accuracy: 1e-9)
+    }
+}

@@ -115,3 +115,12 @@ inflation, Cleveland Fed and Michigan), the fed funds rate against Taylor's
 rule (r* 2, as in 1993, and 0.5), the 10-year Treasury against TIPS and
 breakeven inflation, and the output and unemployment gaps (CBO). From FRED,
 through the API's `Macro`; the arithmetic (`Macro.swift`) is tested.
+
+## Real estate
+
+Mortgage rates against the 10-year (and their spread), house prices against
+rents over a year and as a price-to-rent index, the monthly payment on the
+median house sold (20% down, 30 years fixed, at the rate of the day),
+building and sales, months of supply, delinquency and debt service, and
+homeownership against rental vacancy. From FRED (lib's fred/realestate.txt),
+like π and r: both are `FREDScreen`s, panels over the API's `Macro`.

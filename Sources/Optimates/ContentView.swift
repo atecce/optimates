@@ -22,6 +22,7 @@ struct ContentView: View {
                 if search.isEmpty {
                     Label("Portfolio", systemImage: "chart.pie").tag(PortfolioView.tag)
                     Label("π and r", systemImage: "percent").tag(MacroView.tag)
+                    Label("Real estate", systemImage: "house").tag(RealEstateView.tag)
                 }
                 ForEach(filtered, id: \.self) { Text($0.uppercased()).tag($0) }
             }
@@ -50,6 +51,8 @@ struct ContentView: View {
                 PortfolioView()
             } else if ticker == MacroView.tag {
                 MacroView()
+            } else if ticker == RealEstateView.tag {
+                RealEstateView()
             } else if let ticker {
                 Dashboard(ticker: ticker).id(ticker)
             } else {
@@ -94,6 +97,7 @@ struct ContentView: View {
         switch t {
         case "PORTFOLIO": ticker = PortfolioView.tag
         case "MACRO": ticker = MacroView.tag
+        case "REALESTATE": ticker = RealEstateView.tag
         default: if tickers.contains(t) { ticker = t }
         }
     }

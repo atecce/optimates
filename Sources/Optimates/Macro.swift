@@ -48,16 +48,24 @@ func taylorRule(inflation: [Point], gap: [Point], rStar: Double, target: Double 
     }
 }
 
-/// The FRED series the macro screen reads.
-private let macroSeries = ["PCEPILFE", "PCEPI", "CPIAUCSL", "EXPINF1YR", "MICH",
-                           "FEDFUNDS", "GS10", "FII10", "T10YIEM",
-                           "GDPC1", "GDPPOT", "UNRATE", "NROU"]
+/// A chart of a FRED screen: its title, its lines, how its axis reads.
+struct FREDPanel {
+    let title: String
+    let lines: [Series]
+    var format: Format = .points
+}
 
-/// π and r: inflation, the policy rate against Taylor's rule, nominal and
-/// real rates, and the gaps, from FRED (the API's Macro).
-struct MacroView: View {
-    /// The sidebar's tag for this screen.
-    static let tag = "★ macro"
+/// A screen of FRED series (the API's Macro): it fetches `series`, keeps the
+/// reply on the device, and draws `panels` of what came back, with the
+/// dashboards' charts, crosshair and date range.
+struct FREDScreen: View {
+    let title: String
+    /// Where the reply is kept on the device.
+    let cacheKey: String
+    let series: [String]
+    /// Who publishes the data, for the footnote.
+    let source: String
+    let panels: (_ data: [String: [Point]]) -> [FREDPanel]
 
     @State private var data: [String: [Point]]?
     @State private var keptFrom: Date?
@@ -68,36 +76,6 @@ struct MacroView: View {
     @AppStorage("range") private var range = DateRange.all
     @AppStorage("rangeFrom") private var rangeFrom = Date().addingTimeInterval(-10 * 365.25 * 86_400).timeIntervalSince1970
     @AppStorage("rangeTo") private var rangeTo = Date().timeIntervalSince1970
-
-    private func s(_ id: String) -> [Point] { data?[id] ?? [] }
-
-    private var panels: [(title: String, lines: [Series])] {
-        let corePCE = yearOverYear(s("PCEPILFE"))
-        let gap = percentGap(s("GDPC1"), s("GDPPOT"))
-        return [
-            ("inflation, over a year (%)", [
-                Series(name: "core PCE", points: corePCE),
-                Series(name: "PCE", points: yearOverYear(s("PCEPI"))),
-                Series(name: "CPI", points: yearOverYear(s("CPIAUCSL"))),
-                Series(name: "expected, 1 year (Cleveland Fed)", points: s("EXPINF1YR")),
-                Series(name: "expected, households (Michigan)", points: s("MICH")),
-            ]),
-            ("the policy rate and Taylor's rule (%)", [
-                Series(name: "fed funds", points: s("FEDFUNDS")),
-                Series(name: "Taylor, r* 2 (1993)", points: taylorRule(inflation: corePCE, gap: gap, rStar: 2)),
-                Series(name: "Taylor, r* 0.5", points: taylorRule(inflation: corePCE, gap: gap, rStar: 0.5)),
-            ]),
-            ("10 years: nominal, real, expected inflation (%)", [
-                Series(name: "Treasury", points: s("GS10")),
-                Series(name: "TIPS (real)", points: s("FII10")),
-                Series(name: "breakeven inflation", points: s("T10YIEM")),
-            ]),
-            ("the gaps (percentage points)", [
-                Series(name: "output gap (GDP vs CBO potential, %)", points: gap),
-                Series(name: "unemployment vs its natural rate", points: difference(s("UNRATE"), s("NROU"))),
-            ]),
-        ]
-    }
 
     var body: some View {
         ScrollView {
@@ -114,34 +92,76 @@ struct MacroView: View {
                     Text("Saved \(keptFrom.formatted(.relative(presentation: .named)))" + (notUpdated.map { ": not updated, " + $0 } ?? ", updating…"))
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                ForEach(panels, id: \.title) { panel in
+                ForEach(panels(data ?? [:]), id: \.title) { panel in
                     Panel(title: panel.title, series: panel.lines, loading: data == nil && error == nil,
-                          format: .points,
+                          format: panel.format,
                           range: range.dates(from: Date(timeIntervalSince1970: rangeFrom), to: Date(timeIntervalSince1970: rangeTo)),
                           selected: $selected)
                 }
-                Text("FRED (St. Louis Fed): BEA, BLS, CBO, the Fed, the Cleveland Fed, the University of Michigan.")
+                Text("FRED (St. Louis Fed): \(source).")
                     .font(.caption).foregroundStyle(.secondary)
             }
             .padding()
         }
-        .navigationTitle("π and r")
+        .navigationTitle(title)
         .task {
-            if data == nil, let (kept, fetched) = ReplyCache.shared.get(Equities_V1_MacroResponse.self, "macro") {
+            if data == nil, let (kept, fetched) = ReplyCache.shared.get(Equities_V1_MacroResponse.self, cacheKey) {
                 data = macroData(kept)
                 keptFrom = fetched
             }
             var request = Equities_V1_MacroRequest()
-            request.series = macroSeries
+            request.series = series
             do {
                 let reply = try await API.current().call(.macro, request)
-                ReplyCache.shared.put("macro", reply)
+                ReplyCache.shared.put(cacheKey, reply)
                 data = macroData(reply)
                 (keptFrom, notUpdated) = (nil, nil)
             } catch where isCancellation(error) {
             } catch {
                 if data == nil { self.error = describe(error) } else { notUpdated = describe(error) }
             }
+        }
+    }
+}
+
+/// π and r: inflation, the policy rate against Taylor's rule, nominal and
+/// real rates, and the gaps.
+struct MacroView: View {
+    /// The sidebar's tag for this screen.
+    static let tag = "★ macro"
+
+    var body: some View {
+        FREDScreen(title: "π and r", cacheKey: "macro",
+                   series: ["PCEPILFE", "PCEPI", "CPIAUCSL", "EXPINF1YR", "MICH",
+                            "FEDFUNDS", "GS10", "FII10", "T10YIEM",
+                            "GDPC1", "GDPPOT", "UNRATE", "NROU"],
+                   source: "BEA, BLS, CBO, the Fed, the Cleveland Fed, the University of Michigan") { d in
+            let s = { (id: String) in d[id] ?? [] }
+            let corePCE = yearOverYear(s("PCEPILFE"))
+            let gap = percentGap(s("GDPC1"), s("GDPPOT"))
+            return [
+                FREDPanel(title: "inflation, over a year (%)", lines: [
+                    Series(name: "core PCE", points: corePCE),
+                    Series(name: "PCE", points: yearOverYear(s("PCEPI"))),
+                    Series(name: "CPI", points: yearOverYear(s("CPIAUCSL"))),
+                    Series(name: "expected, 1 year (Cleveland Fed)", points: s("EXPINF1YR")),
+                    Series(name: "expected, households (Michigan)", points: s("MICH")),
+                ]),
+                FREDPanel(title: "the policy rate and Taylor's rule (%)", lines: [
+                    Series(name: "fed funds", points: s("FEDFUNDS")),
+                    Series(name: "Taylor, r* 2 (1993)", points: taylorRule(inflation: corePCE, gap: gap, rStar: 2)),
+                    Series(name: "Taylor, r* 0.5", points: taylorRule(inflation: corePCE, gap: gap, rStar: 0.5)),
+                ]),
+                FREDPanel(title: "10 years: nominal, real, expected inflation (%)", lines: [
+                    Series(name: "Treasury", points: s("GS10")),
+                    Series(name: "TIPS (real)", points: s("FII10")),
+                    Series(name: "breakeven inflation", points: s("T10YIEM")),
+                ]),
+                FREDPanel(title: "the gaps (percentage points)", lines: [
+                    Series(name: "output gap (GDP vs CBO potential, %)", points: gap),
+                    Series(name: "unemployment vs its natural rate", points: difference(s("UNRATE"), s("NROU"))),
+                ]),
+            ]
         }
     }
 }
