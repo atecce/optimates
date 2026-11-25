@@ -1,19 +1,16 @@
 #!/bin/zsh
-# Build the iOS app and run it in the Simulator, reading InfluxDB on this Mac.
+# Build the iOS app and run it in the Simulator, reading the equities API.
 #
 #     ./simulator.sh [DEVICE]      e.g. "iPhone 15 Pro" (the default)
 #     EQUITIES_TICKER=aapl ./simulator.sh    # open a company at launch
+#     EQUITIES_API=http://localhost:8787 ./simulator.sh   # a local equities-api --no-access
 #
-# The Simulator shares the Mac's network, so the app reaches InfluxDB at
-# localhost:8181 as the macOS app does. Its token comes from ~/.profile, like
-# every job here; on a real phone it would have to come from the Keychain.
-# Needs jq (brew install jq).
-#
-# Library's xcframework comes prebuilt from a release of atecce/lib (see
-# Library/Package.swift); Xcode downloads it on the first build.
+# The app gets through Cloudflare Access with the service token from
+# ~/.cloudflared/equities-app.env, passed in its environment (a phone signs in
+# with email instead). Needs jq (brew install jq).
 
-# INFLUXDB3_AUTH_TOKEN.
-source ~/.profile
+# CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET.
+set -a; source ~/.cloudflared/equities-app.env; set +a
 device=${1:-iPhone 15 Pro}
 # The directory this script is in.
 cd ${0:A:h} || exit 1
@@ -39,8 +36,8 @@ open -a Simulator
 xcrun simctl install $id build/Build/Products/Debug-iphonesimulator/Optimates.app || exit 1
 
 # Launch it. simctl passes variables prefixed SIMCTL_CHILD_ into the app's
-# environment with the prefix removed, so the Rust code sees
-# INFLUXDB3_AUTH_TOKEN just as it does on the Mac. --terminate-running-process
-# restarts the app if it was already open, so a new build takes effect.
-SIMCTL_CHILD_INFLUXDB3_AUTH_TOKEN=$INFLUXDB3_AUTH_TOKEN SIMCTL_CHILD_EQUITIES_TICKER=$EQUITIES_TICKER \
+# environment with the prefix removed. --terminate-running-process restarts
+# the app if it was already open, so a new build takes effect.
+SIMCTL_CHILD_CF_ACCESS_CLIENT_ID=$CF_ACCESS_CLIENT_ID SIMCTL_CHILD_CF_ACCESS_CLIENT_SECRET=$CF_ACCESS_CLIENT_SECRET \
+  SIMCTL_CHILD_EQUITIES_API=$EQUITIES_API SIMCTL_CHILD_EQUITIES_TICKER=$EQUITIES_TICKER \
   xcrun simctl launch --terminate-running-process $id pub.atec.optimates

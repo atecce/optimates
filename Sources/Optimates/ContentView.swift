@@ -1,5 +1,4 @@
 import Charts
-import Library
 import SwiftUI
 
 struct ContentView: View {
@@ -13,7 +12,8 @@ struct ContentView: View {
     @State private var loads = 0
 
     init() {
-        ServerSettings.load().apply()
+        // Clears what an earlier version kept for InfluxDB.
+        _ = ServerSettings.load()
     }
 
     var body: some View {
@@ -53,10 +53,10 @@ struct ContentView: View {
             loading = true
             defer { loading = false }
             do {
-                tickers = try await Task.detached { try Library.tickers() }.value
+                tickers = try await API.current().tickers()
                 error = nil
                 // EQUITIES_TICKER=aapl opens a company at launch (simulator.sh).
-                if let t = ProcessInfo.processInfo.environment["EQUITIES_TICKER"]?.lowercased(), tickers.contains(t) {
+                if let t = ProcessInfo.processInfo.environment["EQUITIES_TICKER"]?.uppercased(), tickers.contains(t) {
                     ticker = t
                 }
             } catch {
@@ -64,7 +64,7 @@ struct ContentView: View {
                 self.error = describe(error)
                 // Nothing configured, as on a new phone: ask.
                 switch error {
-                case InfluxError.NoToken, InfluxError.SignIn: showSettings = true
+                case APIError.signIn: showSettings = true
                 default: break
                 }
             }
@@ -84,7 +84,7 @@ enum Side: String, CaseIterable, Identifiable {
     var id: Self { self }
 }
 
-/// The period of a flow: a quarter or a year (`3m`, `12m` in InfluxDB).
+/// The period of a flow: a quarter or a year (`3m`, `12m` in the API).
 enum FlowPeriod: String, CaseIterable, Identifiable {
     case quarter = "3m", year = "12m"
     var id: Self { self }

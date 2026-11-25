@@ -1,67 +1,68 @@
 import Foundation
-import Library
 import Security
 import SwiftUI
 
-/// Where InfluxDB is and the tokens to reach it, kept in the Keychain. Empty
-/// settings mean the environment's (INFLUXDB3_AUTH_TOKEN and so on, as
-/// `swift run` and simulator.sh pass them); a phone needs them set here.
+/// Where the equities API is and how to get through Cloudflare Access to it,
+/// kept in the Keychain.
 ///
-/// Through Cloudflare, a person signs in to Access (accessToken, from
-/// AccessLoginView); the Mac and scripts use Access's service token instead.
+/// A person signs in to Access with their email (accessToken, from
+/// AccessLoginView). The Mac and scripts use Access's service token instead:
+/// set here, or from the environment (CF_ACCESS_CLIENT_ID and
+/// CF_ACCESS_CLIENT_SECRET, as simulator.sh passes them). EQUITIES_API in the
+/// environment points the app at another address, such as a local
+/// `equities-api --no-access`.
 struct ServerSettings: Equatable {
     var url = ""
-    var token = ""
     var accessClientId = ""
     var accessClientSecret = ""
     var accessToken = ""
 
-    /// Through Cloudflare (tunnel/README.md), from anywhere.
-    static let cloudflareURL = "https://influx.atec.pub"
+    /// Through Cloudflare, from anywhere.
+    static let cloudflareURL = "https://api.atec.pub"
 
-    var isEmpty: Bool { token.isEmpty }
+    private static let environment = ProcessInfo.processInfo.environment
 
-    /// The server's address, or the Cloudflare one when empty.
+    /// The API's address: the one set here, else EQUITIES_API, else Cloudflare's.
     var serverURL: URL {
-        if let u = URL(string: url.trimmingCharacters(in: .whitespacesAndNewlines)), u.host != nil { return u }
+        for candidate in [url, Self.environment["EQUITIES_API"] ?? ""] {
+            if let u = URL(string: candidate.trimmingCharacters(in: .whitespacesAndNewlines)), u.host != nil { return u }
+        }
         return URL(string: Self.cloudflareURL)!
     }
 
     var session: AccessSession? { accessToken.isEmpty ? nil : AccessSession(token: accessToken) }
 
+    /// The service token set here, else the environment's.
+    var serviceToken: (id: String, secret: String)? {
+        let trim = { (s: String) in s.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if !trim(accessClientId).isEmpty, !trim(accessClientSecret).isEmpty {
+            return (trim(accessClientId), trim(accessClientSecret))
+        }
+        if let id = Self.environment["CF_ACCESS_CLIENT_ID"], let secret = Self.environment["CF_ACCESS_CLIENT_SECRET"],
+           !id.isEmpty, !secret.isEmpty {
+            return (id, secret)
+        }
+        return nil
+    }
+
     static func load() -> ServerSettings {
-        ServerSettings(
-            url: Keychain.get("url") ?? "",
-            token: Keychain.get("token") ?? "",
+        // Before the API, the app read InfluxDB directly: its address, its
+        // token and the Access session for influx.atec.pub are no use now.
+        for old in ["url", "token", "accessToken"] where Keychain.get(old) != nil {
+            Keychain.set(old, "")
+        }
+        return ServerSettings(
+            url: Keychain.get("apiURL") ?? "",
             accessClientId: Keychain.get("accessClientId") ?? "",
             accessClientSecret: Keychain.get("accessClientSecret") ?? "",
-            accessToken: Keychain.get("accessToken") ?? "")
+            accessToken: Keychain.get("apiAccessToken") ?? "")
     }
 
     func save() {
-        Keychain.set("url", url)
-        Keychain.set("token", token)
+        Keychain.set("apiURL", url)
         Keychain.set("accessClientId", accessClientId)
         Keychain.set("accessClientSecret", accessClientSecret)
-        Keychain.set("accessToken", accessToken)
-    }
-
-    /// Point the Rust client at this server, or back at the environment.
-    func apply() {
-        guard !isEmpty else {
-            Library.configure(server: nil)
-            return
-        }
-        let trimmed = { (s: String) -> String? in
-            let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
-            return t.isEmpty ? nil : t
-        }
-        Library.configure(server: Server(
-            url: trimmed(url) ?? Self.cloudflareURL,
-            token: token.trimmingCharacters(in: .whitespacesAndNewlines),
-            accessClientId: trimmed(accessClientId),
-            accessClientSecret: trimmed(accessClientSecret),
-            accessToken: trimmed(accessToken)))
+        Keychain.set("apiAccessToken", accessToken)
     }
 }
 
@@ -99,7 +100,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var settings = ServerSettings.load()
     @State private var signingIn = false
-    /// Called after saving, to reload with the new server.
+    /// Called after saving, to load again.
     let onSave: () -> Void
 
     var body: some View {
@@ -129,13 +130,6 @@ struct SettingsView: View {
                         .textInputAutocapitalization(.never)
                         .keyboardType(.URL)
                         #endif
-                    SecureField("token", text: $settings.token)
-                } header: {
-                    Text("InfluxDB")
-                } footer: {
-                    Text("Empty address: \(ServerSettings.cloudflareURL). Empty token: the environment's, as from swift run or simulator.sh.")
-                }
-                Section {
                     DisclosureGroup("Service token (Mac and scripts)") {
                         TextField("client ID", text: $settings.accessClientId)
                             .autocorrectionDisabled()
@@ -144,8 +138,10 @@ struct SettingsView: View {
                             #endif
                         SecureField("client secret", text: $settings.accessClientSecret)
                     }
+                } header: {
+                    Text("Server")
                 } footer: {
-                    Text("Instead of signing in: equities-app, in ~/.cloudflared/equities-app.env on the Mac.")
+                    Text("Empty address: \(ServerSettings.cloudflareURL). The service token, instead of signing in: equities-app, in ~/.cloudflared/equities-app.env on the Mac.")
                 }
             }
             .navigationTitle("Server")
@@ -156,17 +152,17 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         settings.save()
-                        settings.apply()
                         onSave()
                         dismiss()
                     }
                 }
             }
             .sheet(isPresented: $signingIn) {
-                AccessLoginView(url: settings.serverURL) { token in
+                AccessLoginView(url: settings.serverURL.appendingPathComponent("health")) { token in
                     // Kept at once: a sign-in shouldn't be lost to Cancel.
                     settings.accessToken = token
-                    Keychain.set("accessToken", token)
+                    Keychain.set("apiAccessToken", token)
+                    onSave()
                 }
             }
         }

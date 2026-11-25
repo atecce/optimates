@@ -12,7 +12,6 @@
 		E0000000000000000000A003 /* Series.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B003 /* Series.swift */; };
 		E0000000000000000000A005 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B005 /* Settings.swift */; };
 		E0000000000000000000A007 /* AccessLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B007 /* AccessLogin.swift */; };
-		E0000000000000000000A004 /* Library in Frameworks */ = {isa = PBXBuildFile; productRef = E0000000000000000000C002 /* Library */; };
 		E0000000000000000000A006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B006 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -31,7 +30,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E0000000000000000000A004 /* Library in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -91,9 +89,6 @@
 			dependencies = (
 			);
 			name = Optimates;
-			packageProductDependencies = (
-				E0000000000000000000C002 /* Library */,
-			);
 			productName = Optimates;
 			productReference = E0000000000000000000B004 /* Optimates.app */;
 			productType = "com.apple.product-type.application";
@@ -117,9 +112,6 @@
 				Base,
 			);
 			mainGroup = E0000000000000000000E001;
-			packageReferences = (
-				E0000000000000000000C001 /* XCLocalSwiftPackageReference "Library" */,
-			);
 			productRefGroup = E0000000000000000000E003 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -257,20 +249,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCLocalSwiftPackageReference section */
-		E0000000000000000000C001 /* XCLocalSwiftPackageReference "Library" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Library;
-		};
-/* End XCLocalSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		E0000000000000000000C002 /* Library */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = Library;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E0000000000000000000F002 /* Project object */;
 }

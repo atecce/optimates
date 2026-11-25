@@ -4,8 +4,8 @@ import WebKit
 
 /// A Cloudflare Access session: the `CF_Authorization` token Access sets on
 /// the server's domain once a person is through its login (for
-/// influx.atec.pub, an email one-time code; the 家人 (jiārén) policy). The
-/// Rust client sends it as `cf-access-token`.
+/// api.atec.pub, an email one-time code; the 家人 (jiārén) policy). The app
+/// sends it to the API as `cf-access-token`.
 struct AccessSession {
     let token: String
 
