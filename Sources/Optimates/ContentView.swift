@@ -332,9 +332,10 @@ struct Dashboard: View {
     }
 
     private func show(_ fetched: CompanyData) {
-        // The company's reporting currency: USD if it has it, else the one
-        // with the most series (a Tokyo listing's JPY).
-        if fetched[currency] == nil {
+        // On first showing, the company's reporting currency: the one with
+        // the most series (Toyota's yen, not the dollars of two old 20-Fs);
+        // after that, whichever was picked, unless the data lacks it.
+        if data == nil || fetched[currency] == nil {
             currency = fetched.max { a, b in a.value.count < b.value.count }?.key ?? currency
         }
         data = fetched
