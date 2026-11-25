@@ -359,10 +359,10 @@ struct Panel: View {
         return first ... last
     }
 
-    /// A line's points in the range.
+    /// A line's points in the range (and above zero on a log scale, which
+    /// can't show the rest).
     private func shown(_ s: Series) -> [Point] {
-        guard let range else { return s.points }
-        return s.points.filter { range.contains($0.time) }
+        s.points.filter { (range?.contains($0.time) ?? true) && (!log || $0.value > 0) }
     }
 
     /// Each line's value at the crosshair (`Series.value(at:)`), from all of
@@ -374,31 +374,69 @@ struct Panel: View {
         }
     }
 
-    var body: some View {
-        VStack(alignment: .leading) {
-            Text(title).font(.headline)
-            Chart {
-                ForEach(series) { s in
-                    ForEach(shown(s), id: \.time) { p in
-                        // A log scale cannot show zero or negative values.
-                        if !log || p.value > 0 {
-                            LineMark(x: .value("Date", p.time), y: .value("Value", p.value))
-                                .foregroundStyle(by: .value("Series", s.name))
-                        }
-                    }
+    private func color(_ i: Int) -> Color { palette[i % palette.count] }
+
+    /// The rule at the crosshair, and its readout.
+    @ChartContentBuilder private var crosshair: some ChartContent {
+        if let selected {
+            RuleMark(x: .value("Date", selected))
+                .foregroundStyle(.secondary)
+                .lineStyle(StrokeStyle(lineWidth: 1))
+                .annotation(position: .top, spacing: 4,
+                            overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                    Readout(date: selected, values: readout, format: format)
                 }
-                if let selected {
-                    RuleMark(x: .value("Date", selected))
-                        .foregroundStyle(.secondary)
-                        .lineStyle(StrokeStyle(lineWidth: 1))
-                        .annotation(position: .top, spacing: 4,
-                                    overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
-                            Readout(date: selected, values: readout, format: format)
-                        }
+        }
+    }
+
+    /// The lines: one mark a point, as iOS 17 draws them.
+    private var markChart: some View {
+        Chart {
+            ForEach(Array(series.enumerated()), id: \.element.id) { i, s in
+                ForEach(shown(s), id: \.time) { p in
+                    LineMark(x: .value("Date", p.time), y: .value("Value", p.value))
+                        .foregroundStyle(by: .value("Series", s.name))
                 }
             }
-            .chartForegroundStyleScale(domain: series.map(\.name),
-                                       range: series.indices.map { palette[$0 % palette.count] })
+            crosshair
+        }
+        .chartForegroundStyleScale(domain: series.map(\.name), range: series.indices.map(color))
+    }
+
+    #if compiler(>=6.0)
+    /// The lines as vectorized plots (iOS 18): one plot a line, drawn
+    /// together, not one mark a point. Thousands of daily prices draw and
+    /// scroll the crosshair much faster. (Built by Xcode Cloud's newer
+    /// compiler only: the Mac's Xcode 15 has no LinePlot.)
+    @available(iOS 18, macOS 15, *)
+    private var plotChart: some View {
+        Chart {
+            ForEach(Array(series.enumerated()), id: \.element.id) { i, s in
+                LinePlot(shown(s), x: .value("Date", \.time), y: .value("Value", \.value))
+                    .foregroundStyle(color(i))
+            }
+            crosshair
+        }
+    }
+    #endif
+
+    /// The chart for this system: vectorized where it can be.
+    @ViewBuilder private var chart: some View {
+        #if compiler(>=6.0)
+        if #available(iOS 18, macOS 15, *) {
+            styled(plotChart)
+        } else {
+            styled(markChart)
+        }
+        #else
+        styled(markChart)
+        #endif
+    }
+
+    /// What both kinds of chart share: the crosshair, the axes, the legend.
+    private func styled(_ chart: some View) -> some View {
+        chart
+            .chartLegend(.hidden)
             .chartXSelection(value: $selected)
             .chartXScale(domain: xDomain)
             .chartYScale(type: log ? .log : .linear)
@@ -410,6 +448,21 @@ struct Panel: View {
             }
             .frame(height: 260)
             .overlay { if loading { ProgressView() } }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text(title).font(.headline)
+            chart
+            // The legend, drawn here: vectorized plots have no automatic one.
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), alignment: .leading)], alignment: .leading, spacing: 4) {
+                ForEach(Array(series.enumerated()), id: \.element.id) { i, s in
+                    HStack(spacing: 4) {
+                        Circle().fill(color(i)).frame(width: 8, height: 8)
+                        Text(s.name).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                }
+            }
         }
     }
 }
