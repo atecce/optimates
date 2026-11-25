@@ -808,6 +808,12 @@ struct Equities_V1_HoldingsResponse: Sendable {
   /// When the brokerage was last synced: seconds since 1970.
   var syncedUnix: Int64 = 0
 
+  /// What positions are measured against, the portfolio's r: "MINT" (PIMCO
+  /// Enhanced Short Maturity, total return), and the day of its last price.
+  var baseline: String = String()
+
+  var baselineEpochDay: Int32 = 0
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -872,11 +878,36 @@ struct Equities_V1_Position: Sendable {
   /// The day of the price: days since 1970-01-01.
   var priceEpochDay: Int32 = 0
 
+  /// The baseline: the dollars that bought the shares still held, put into
+  /// the baseline (HoldingsResponse.baseline) on the same days instead, and
+  /// what they'd be worth now. Gain over r is (value - cost) minus
+  /// (baseline_value - baseline_cost). Unset when the buys on record (Plaid's
+  /// two years) don't account for every share, and for shorts, options, cash.
+  var baselineCost: Double {
+    get {_baselineCost ?? 0}
+    set {_baselineCost = newValue}
+  }
+  /// Returns true if `baselineCost` has been explicitly set.
+  var hasBaselineCost: Bool {self._baselineCost != nil}
+  /// Clears the value of `baselineCost`. Subsequent reads from it will return its default value.
+  mutating func clearBaselineCost() {self._baselineCost = nil}
+
+  var baselineValue: Double {
+    get {_baselineValue ?? 0}
+    set {_baselineValue = newValue}
+  }
+  /// Returns true if `baselineValue` has been explicitly set.
+  var hasBaselineValue: Bool {self._baselineValue != nil}
+  /// Clears the value of `baselineValue`. Subsequent reads from it will return its default value.
+  mutating func clearBaselineValue() {self._baselineValue = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
   fileprivate var _cost: Double? = nil
+  fileprivate var _baselineCost: Double? = nil
+  fileprivate var _baselineValue: Double? = nil
 }
 
 struct Equities_V1_MacroRequest: Sendable {
@@ -1245,7 +1276,7 @@ extension Equities_V1_HoldingsRequest: SwiftProtobuf.Message, SwiftProtobuf._Mes
 
 extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".HoldingsResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}accounts\0\u{3}synced_unix\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}accounts\0\u{3}synced_unix\0\u{1}baseline\0\u{3}baseline_epoch_day\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1255,6 +1286,8 @@ extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.accounts) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.syncedUnix) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.baseline) }()
+      case 4: try { try decoder.decodeSingularInt32Field(value: &self.baselineEpochDay) }()
       default: break
       }
     }
@@ -1267,12 +1300,20 @@ extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
     if self.syncedUnix != 0 {
       try visitor.visitSingularInt64Field(value: self.syncedUnix, fieldNumber: 2)
     }
+    if !self.baseline.isEmpty {
+      try visitor.visitSingularStringField(value: self.baseline, fieldNumber: 3)
+    }
+    if self.baselineEpochDay != 0 {
+      try visitor.visitSingularInt32Field(value: self.baselineEpochDay, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Equities_V1_HoldingsResponse, rhs: Equities_V1_HoldingsResponse) -> Bool {
     if lhs.accounts != rhs.accounts {return false}
     if lhs.syncedUnix != rhs.syncedUnix {return false}
+    if lhs.baseline != rhs.baseline {return false}
+    if lhs.baselineEpochDay != rhs.baselineEpochDay {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1330,7 +1371,7 @@ extension Equities_V1_Account: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
 
 extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Position"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ticker\0\u{1}name\0\u{1}kind\0\u{1}quantity\0\u{1}price\0\u{1}value\0\u{1}cost\0\u{3}cost_source\0\u{3}price_epoch_day\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ticker\0\u{1}name\0\u{1}kind\0\u{1}quantity\0\u{1}price\0\u{1}value\0\u{1}cost\0\u{3}cost_source\0\u{3}price_epoch_day\0\u{3}baseline_cost\0\u{3}baseline_value\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1347,6 +1388,8 @@ extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
       case 7: try { try decoder.decodeSingularDoubleField(value: &self._cost) }()
       case 8: try { try decoder.decodeSingularEnumField(value: &self.costSource) }()
       case 9: try { try decoder.decodeSingularInt32Field(value: &self.priceEpochDay) }()
+      case 10: try { try decoder.decodeSingularDoubleField(value: &self._baselineCost) }()
+      case 11: try { try decoder.decodeSingularDoubleField(value: &self._baselineValue) }()
       default: break
       }
     }
@@ -1384,6 +1427,12 @@ extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
     if self.priceEpochDay != 0 {
       try visitor.visitSingularInt32Field(value: self.priceEpochDay, fieldNumber: 9)
     }
+    try { if let v = self._baselineCost {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 10)
+    } }()
+    try { if let v = self._baselineValue {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 11)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1397,6 +1446,8 @@ extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
     if lhs._cost != rhs._cost {return false}
     if lhs.costSource != rhs.costSource {return false}
     if lhs.priceEpochDay != rhs.priceEpochDay {return false}
+    if lhs._baselineCost != rhs._baselineCost {return false}
+    if lhs._baselineValue != rhs._baselineValue {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -27,7 +27,7 @@ struct PortfolioView: View {
             }
             if let reply {
                 Section {
-                    Totals(positions: reply.accounts.flatMap(\.positions), balance: reply.accounts.map(\.balance).reduce(0, +))
+                    Totals(positions: reply.accounts.flatMap(\.positions), balance: reply.accounts.map(\.balance).reduce(0, +), baseline: reply.baseline)
                 } footer: {
                     if reply.syncedUnix > 0 {
                         Text("Synced with the brokerage \(Date(timeIntervalSince1970: TimeInterval(reply.syncedUnix)).formatted(.relative(presentation: .named))). Pull to refresh.")
@@ -35,7 +35,7 @@ struct PortfolioView: View {
                 }
                 ForEach(reply.accounts, id: \.name) { account in
                     Section {
-                        Totals(positions: account.positions, balance: account.balance)
+                        Totals(positions: account.positions, balance: account.balance, baseline: reply.baseline)
                         let positions = ordered(account.positions)
                         let all = expanded.contains(account.name)
                         ForEach(Array((all ? positions : Array(positions.prefix(Self.shownAtFirst))).enumerated()), id: \.offset) { _, p in
@@ -98,7 +98,22 @@ func unrealized(_ positions: [Equities_V1_Position]) -> (gain: Double, cost: Dou
     return (known.map { $0.value - $0.cost }.reduce(0, +), known.map { abs($0.cost) }.reduce(0, +))
 }
 
+/// Long positions measured against the baseline (the portfolio's r, MINT):
+/// their gain, what the same dollars made in the baseline over the same
+/// days, and how many of the long positions that covers (buys older than
+/// Plaid's two years can't be measured).
+func overBaseline(_ positions: [Equities_V1_Position]) -> (gain: Double, baseline: Double, measured: Int, of: Int)? {
+    let longs = positions.filter { $0.kind == .long }
+    let measured = longs.filter { $0.hasCost && $0.hasBaselineCost && $0.hasBaselineValue }
+    guard !measured.isEmpty else { return nil }
+    return (measured.map { $0.value - $0.cost }.reduce(0, +),
+            measured.map { $0.baselineValue - $0.baselineCost }.reduce(0, +),
+            measured.count, longs.count)
+}
+
 private func dollars(_ v: Double) -> String { v.formatted(.currency(code: "USD")) }
+
+private func signedDollars(_ v: Double) -> String { (v >= 0 ? "+" : "") + dollars(v) }
 
 private func signedPercent(_ v: Double) -> String {
     v.formatted(.percent.precision(.fractionLength(1)).sign(strategy: .always()))
@@ -107,17 +122,34 @@ private func signedPercent(_ v: Double) -> String {
 private struct Totals: View {
     let positions: [Equities_V1_Position]
     let balance: Double
+    let baseline: String
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(dollars(balance)).font(.title3.bold()).monospacedDigit()
-            Spacer()
-            if let (gain, cost) = unrealized(positions) {
-                VStack(alignment: .trailing) {
-                    Text((gain >= 0 ? "+" : "") + dollars(gain)).monospacedDigit()
-                    if cost > 0 { Text(signedPercent(gain / cost)).font(.caption).monospacedDigit() }
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(dollars(balance)).font(.title3.bold()).monospacedDigit()
+                Spacer()
+                if let (gain, cost) = unrealized(positions) {
+                    VStack(alignment: .trailing) {
+                        Text(signedDollars(gain)).monospacedDigit()
+                        if cost > 0 { Text(signedPercent(gain / cost)).font(.caption).monospacedDigit() }
+                    }
+                    .foregroundStyle(gain >= 0 ? Color.green : Color.red)
                 }
-                .foregroundStyle(gain >= 0 ? Color.green : Color.red)
+            }
+            if let m = overBaseline(positions) {
+                // r: what the same dollars made in the baseline, and the
+                // gain over it.
+                HStack(alignment: .firstTextBaseline) {
+                    Text("\(baseline) would have made \(signedDollars(m.baseline))")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("over r " + signedDollars(m.gain - m.baseline)).monospacedDigit()
+                        .foregroundStyle(m.gain - m.baseline >= 0 ? Color.green : Color.red)
+                }
+                .font(.caption)
+                Text("on \(m.measured) of \(m.of) positions: the ones whose buys are all in the last two years")
+                    .font(.caption2).foregroundStyle(.secondary)
             }
         }
     }
@@ -145,9 +177,14 @@ private struct PositionRow: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text(dollars(position.value)).monospacedDigit()
                 if let (gain, cost) = unrealized([position]) {
-                    Text((gain >= 0 ? "+" : "") + dollars(gain) + (cost > 0 ? "  " + signedPercent(gain / cost) : ""))
+                    Text(signedDollars(gain) + (cost > 0 ? "  " + signedPercent(gain / cost) : ""))
                         .font(.caption).monospacedDigit()
                         .foregroundStyle(gain >= 0 ? Color.green : Color.red)
+                }
+                if let m = overBaseline([position]) {
+                    Text("over r " + signedDollars(m.gain - m.baseline))
+                        .font(.caption2).monospacedDigit()
+                        .foregroundStyle(m.gain - m.baseline >= 0 ? Color.green : Color.red)
                 }
             }
         }

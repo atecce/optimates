@@ -205,3 +205,27 @@ final class MacroTests: XCTestCase {
         XCTAssertEqual(gap[1].value, 0.1, accuracy: 1e-9)
     }
 }
+
+/// The portfolio against its r.
+final class BaselineTests: XCTestCase {
+    func long(value: Double, cost: Double, baselineCost: Double?, baselineValue: Double?) -> Equities_V1_Position {
+        .with { p in
+            p.kind = .long; p.value = value; p.cost = cost
+            if let baselineCost { p.baselineCost = baselineCost }
+            if let baselineValue { p.baselineValue = baselineValue }
+        }
+    }
+
+    func testOverBaselineCountsOnlyMeasuredLongs() throws {
+        let m = try XCTUnwrap(overBaseline([
+            long(value: 120, cost: 100, baselineCost: 100, baselineValue: 104),  // +20, MINT +4
+            long(value: 90, cost: 100, baselineCost: 100, baselineValue: 103),   // -10, MINT +3
+            long(value: 50, cost: 40, baselineCost: nil, baselineValue: nil),    // not measured
+            .with { $0.kind = .short; $0.value = -10; $0.cost = -12 },          // shorts: no baseline
+        ]))
+        XCTAssertEqual(m.gain, 10, accuracy: 1e-9)
+        XCTAssertEqual(m.baseline, 7, accuracy: 1e-9)
+        XCTAssertEqual(m.measured, 2)
+        XCTAssertEqual(m.of, 3)
+    }
+}
