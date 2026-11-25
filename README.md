@@ -8,15 +8,38 @@ equities API (`equities/api`, at `api.atec.pub`).
 Optimates.xcodeproj    the iOS app (bundle ID pub.atec.optimates, team Y82E2K77P5)
 Package.swift          the macOS app: swift run
 Sources/Optimates/     the SwiftUI sources, shared by both
+  Generated/           the API's messages and client, from Proto/ (proto.sh)
+Proto/                 the API's contract, equities.proto, copied from lib
+proto.sh               copy the .proto from lib and generate the Swift
 simulator.sh           build and run the iOS app in the Simulator
 ```
 
 ## The API
 
-The app makes two requests, `GET /tickers` and `GET /dashboard`, to
+The app makes two calls, `Tickers` and `Dashboard`, to
 `https://api.atec.pub`: a service on the Mac in lib that reads Postgres,
 reached through a Cloudflare tunnel. Cloudflare Access stands in front of
 it, and the service checks Access's signed assertion on every request too.
+
+
+## The contract
+
+`Proto/equities/v1/equities.proto` is the API, the same file lib serves
+from (`equities/api/proto`). `proto.sh` copies it from a checkout of lib and
+generates `Sources/Optimates/Generated`: the messages (swift-protobuf) and
+a typed client (connect-swift). Items, periods and market fields are enums
+(`.totalAssets`, `.quarter`, `.marketCap`), so a line the API doesn't know
+doesn't compile. Calls travel as the Connect protocol, protobuf over plain
+HTTP POST.
+
+```sh
+./proto.sh            # after changing the .proto in lib; commit all it writes
+```
+
+The packages are pinned exactly, the same in `Package.swift` and
+`Optimates.xcodeproj`, and `proto.sh` builds the generators from them, so
+generated code and runtime match. connect-swift 1.2.0 and swift-protobuf
+1.34.1 are the last releases that build with Xcode 15.4 (Swift 5.10).
 
 The app gets through Access in one of two ways:
 

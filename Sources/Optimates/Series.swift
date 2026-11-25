@@ -1,30 +1,10 @@
+import Connect
 import Foundation
 
 /// A value at a date.
-struct Point: Decodable {
+struct Point {
     let time: Date
     let value: Double
-
-    private enum CodingKeys: String, CodingKey { case date, value }
-
-    /// Dates come as `2026-09-26`, a day: midnight UTC.
-    private static let day: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        let date = try c.decode(String.self, forKey: .date)
-        guard let time = Point.day.date(from: date) else {
-            throw DecodingError.dataCorruptedError(forKey: .date, in: c, debugDescription: "not a date: \(date)")
-        }
-        self.time = time
-        value = try c.decode(Double.self, forKey: .value)
-    }
 }
 
 /// A named line on a chart.
@@ -34,40 +14,47 @@ struct Series: Identifiable {
     var id: String { name }
 }
 
-/// What a chart line draws.
-enum Source {
-    /// A reported item: `item` as in `equities::Item`, `period` 3m, 12m or pit.
-    case reported(item: String, period: String)
-    /// A market field: close, market_cap, price_to_book, return_on_equity,
-    /// earnings_yield.
-    case market(field: String)
-
-    /// Its place in a company's `Dashboard` data.
-    var key: String {
-        switch self {
-        case let .reported(item, period): return "\(item)/\(period)"
-        case let .market(field): return "\(field)/market"
-        }
-    }
+/// What a chart line draws: the API's own terms (Generated/equities.pb.swift,
+/// from lib's equities.proto), so the compiler checks every line against it.
+enum Source: Hashable {
+    /// A reported item for a period.
+    case reported(Equities_V1_Item, Equities_V1_Period)
+    /// A market series.
+    case market(Equities_V1_MarketField)
 }
 
-/// A company's dashboard data, by currency, then by `Source.key`.
-typealias CompanyData = [String: [String: [Point]]]
+/// A company's dashboard data, by currency, then by line.
+typealias CompanyData = [String: [Source: [Point]]]
 
-/// Everything the given lines need, every period and currency, in one request.
-func fetchCompany(_ ticker: String, sources: [Source], periods: [String]) async throws -> CompanyData {
-    var items = Set<String>(), fields = Set<String>()
+/// Everything the given lines need, each item in each of `periods`, every
+/// currency, in one call.
+func fetchCompany(_ ticker: String, sources: [Source], periods: [Equities_V1_Period]) async throws -> CompanyData {
+    var request = Equities_V1_DashboardRequest()
+    request.ticker = ticker
+    request.periods = periods
+    var items = Set<Equities_V1_Item>(), fields = Set<Equities_V1_MarketField>()
     for source in sources {
         switch source {
         case let .reported(item, _): items.insert(item)
         case let .market(field): fields.insert(field)
         }
     }
-    let series = try await API.current().dashboard(
-        ticker: ticker, items: items.sorted(), periods: periods, market: fields.sorted())
+    request.items = items.sorted { $0.rawValue < $1.rawValue }
+    request.market = fields.sorted { $0.rawValue < $1.rawValue }
+
+    let response = try await API.current().call { await $0.dashboard(request: request, headers: $1) }
     var data = CompanyData()
-    for s in series {
-        data[s.currency, default: [:]]["\(s.item)/\(s.period)"] = s.points
+    for series in response.series {
+        let source: Source
+        switch series.of {
+        case let .reported(r)?: source = .reported(r.item, r.period)
+        case let .market(f)?: source = .market(f)
+        // A kind of series newer than this app: not drawn.
+        case nil: continue
+        }
+        data[series.currency, default: [:]][source] = series.points.map {
+            Point(time: Date(timeIntervalSince1970: TimeInterval($0.epochDay) * 86_400), value: $0.value)
+        }
     }
     return data
 }
@@ -75,82 +62,58 @@ func fetchCompany(_ ticker: String, sources: [Source], periods: [String]) async 
 enum APIError: Error {
     /// Cloudflare Access wants a sign-in: none yet, or it expired.
     case signIn
-    /// The API refused the request or failed: its message.
+    /// The API refused the call or failed: its message.
     case server(String)
 }
 
 /// The equities API (lib's `equities/api`), at api.atec.pub behind
-/// Cloudflare Access: everything the app reads. A person is let through with
-/// their Access session (`cf-access-token`), the Mac and scripts with the
-/// service token's headers.
+/// Cloudflare Access, over Connect. A person is let through with their
+/// Access session (`cf-access-token`), the Mac and scripts with the service
+/// token's headers.
 struct API {
-    let base: URL
-    let headers: [String: String]
-
-    /// One series of a company's dashboard, as the API returns it.
-    struct DashboardSeries: Decodable {
-        let item: String
-        let period: String
-        let currency: String
-        let points: [Point]
-    }
+    let client: Equities_V1_EquitiesClient
+    let headers: Headers
+    let signedIn: Bool
 
     /// From the settings (the Keychain, else the environment).
     static func current() -> API {
         let s = ServerSettings.load()
-        var headers: [String: String] = [:]
+        var headers: Headers = [:]
         if let session = s.session, !session.isExpired {
-            headers["cf-access-token"] = session.token
+            headers["cf-access-token"] = [session.token]
         } else if let token = s.serviceToken {
-            headers["CF-Access-Client-Id"] = token.id
-            headers["CF-Access-Client-Secret"] = token.secret
+            headers["CF-Access-Client-Id"] = [token.id]
+            headers["CF-Access-Client-Secret"] = [token.secret]
         }
-        return API(base: s.serverURL, headers: headers)
+        let config = ProtocolClientConfig(host: s.serverURL.absoluteString, networkProtocol: .connect,
+                                          codec: ProtoCodec(), timeout: 30)
+        return API(client: Equities_V1_EquitiesClient(client: ProtocolClient(config: config)),
+                   headers: headers, signedIn: !headers.isEmpty)
     }
 
     func tickers() async throws -> [String] {
-        try await get("tickers", [])
+        try await call { await $0.tickers(request: Equities_V1_TickersRequest(), headers: $1) }.tickers
     }
 
-    func dashboard(ticker: String, items: [String], periods: [String], market: [String]) async throws -> [DashboardSeries] {
-        try await get("dashboard", [
-            URLQueryItem(name: "ticker", value: ticker),
-            URLQueryItem(name: "items", value: items.joined(separator: ",")),
-            URLQueryItem(name: "periods", value: periods.joined(separator: ",")),
-            URLQueryItem(name: "market", value: market.joined(separator: ",")),
-        ])
-    }
-
-    private func get<T: Decodable>(_ path: String, _ query: [URLQueryItem]) async throws -> T {
-        var components = URLComponents(url: base.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
-        if !query.isEmpty { components.queryItems = query }
-        let url = components.url!
-        var request = URLRequest(url: url, timeoutInterval: 30)
-        for (k, v) in headers { request.setValue(v, forHTTPHeaderField: k) }
-        let (data, response) = try await API.session.data(for: request)
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-        switch status {
-        case 200:
-            return try JSONDecoder().decode(T.self, from: data)
-        // Access answers a request it won't let through with a redirect to
-        // its login page (not followed: see NoRedirects); the API itself
-        // with 401 or 403.
-        case 300..<400, 401, 403:
-            throw APIError.signIn
-        default:
-            let message = (try? JSONDecoder().decode([String: String].self, from: data))?["error"]
-            throw APIError.server(message ?? "\(url.host ?? "the server"): HTTP \(status)")
-        }
-    }
-
-    private static let session = URLSession(configuration: .ephemeral, delegate: NoRedirects(), delegateQueue: nil)
-
-    /// A redirect is Access sending us to its login page: stop there, so the
-    /// app learns a sign-in is needed instead of getting the page's HTML.
-    private final class NoRedirects: NSObject, URLSessionTaskDelegate {
-        func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
-                        newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
-            completionHandler(nil)
+    /// Make a call, its failure an APIError.
+    func call<Output>(_ rpc: (Equities_V1_EquitiesClient, Headers) async -> ResponseMessage<Output>) async throws -> Output {
+        // No credentials: Access would only send us to its login page.
+        guard signedIn else { throw APIError.signIn }
+        let response = await rpc(client, headers)
+        switch response.result {
+        case let .success(output):
+            return output
+        case let .failure(error):
+            switch error.code {
+            // The API refusing Access's assertion, or Access's login page
+            // (a session it no longer accepts, followed to its HTML).
+            case .unauthenticated, .permissionDenied:
+                throw APIError.signIn
+            case .unknown where (error.message ?? "").contains("text/html"):
+                throw APIError.signIn
+            default:
+                throw APIError.server(error.message ?? "\(error.code)")
+            }
         }
     }
 }

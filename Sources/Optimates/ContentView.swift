@@ -84,11 +84,12 @@ enum Side: String, CaseIterable, Identifiable {
     var id: Self { self }
 }
 
-/// The period of a flow: a quarter or a year (`3m`, `12m` in the API).
+/// The period of a flow: a quarter or a year (stored as `3m`, `12m`).
 enum FlowPeriod: String, CaseIterable, Identifiable {
     case quarter = "3m", year = "12m"
     var id: Self { self }
     var label: String { self == .quarter ? "Quarter" : "Year" }
+    var proto: Equities_V1_Period { self == .quarter ? .quarter : .year }
 }
 
 /// One chart's worth: what equities.json shows in a panel.
@@ -113,14 +114,14 @@ struct Dashboard: View {
     @AppStorage("side") private var side = Side.stocks
     @AppStorage("period") private var period = FlowPeriod.quarter
 
-    private func pit(_ item: String) -> Source { .reported(item: item, period: "pit") }
-    private func flow(_ item: String) -> Source { .reported(item: item, period: period.rawValue) }
+    private func pit(_ item: Equities_V1_Item) -> Source { .reported(item, .pointInTime) }
+    private func flow(_ item: Equities_V1_Item) -> Source { .reported(item, period.proto) }
 
     /// Every line of both tabs, for both flow periods: what to fetch.
     private var allSources: [Source] {
         (stocks + flows).flatMap { $0.lines.map(\.1) }
             + flows.flatMap { $0.lines.map(\.1) }.compactMap {
-                if case let .reported(item, _) = $0 { return .reported(item: item, period: "12m") }
+                if case let .reported(item, _) = $0 { return .reported(item, .year) }
                 return nil
             }
     }
@@ -129,53 +130,53 @@ struct Dashboard: View {
 
     private var stocks: [PanelSpec] {[
         PanelSpec(title: "equity and debt", lines: [
-            ("total assets", pit("TotalAssets")),
-            ("total liabilities", pit("TotalLiabilities")),
-            ("stockholders' equity", pit("StockholdersEquity")),
-            ("total debt", pit("TotalDebt")),
+            ("total assets", pit(.totalAssets)),
+            ("total liabilities", pit(.totalLiabilities)),
+            ("stockholders' equity", pit(.stockholdersEquity)),
+            ("total debt", pit(.totalDebt)),
         ]),
         PanelSpec(title: "cash and working capital", lines: [
-            ("cash", pit("CashAndCashEquivalents")),
-            ("marketable securities", pit("MarketableSecurities")),
-            ("receivables", pit("AccountsReceivableNet")),
-            ("inventories", pit("Inventories")),
+            ("cash", pit(.cashAndCashEquivalents)),
+            ("marketable securities", pit(.marketableSecurities)),
+            ("receivables", pit(.accountsReceivableNet)),
+            ("inventories", pit(.inventories)),
         ]),
         PanelSpec(title: "long-lived assets", lines: [
-            ("property and equipment", pit("PropertyAndEquipmentNet")),
-            ("goodwill", pit("Goodwill")),
-            ("intangibles", pit("IntangibleAssetsNet")),
+            ("property and equipment", pit(.propertyAndEquipmentNet)),
+            ("goodwill", pit(.goodwill)),
+            ("intangibles", pit(.intangibleAssetsNet)),
         ]),
         PanelSpec(title: "market value and book value (log scale)", lines: [
-            ("market cap", .market(field: "market_cap")),
-            ("book value", pit("StockholdersEquity")),
+            ("market cap", .market(.marketCap)),
+            ("book value", pit(.stockholdersEquity)),
         ], log: true),
         PanelSpec(title: "price-to-book", lines: [
-            ("price-to-book", .market(field: "price_to_book")),
+            ("price-to-book", .market(.priceToBook)),
         ], format: .ratio),
     ]}
 
     private var flows: [PanelSpec] {[
         PanelSpec(title: "income and returns to shareholders", lines: [
-            ("revenue", flow("Revenue")),
-            ("operating income", flow("OperatingIncome")),
-            ("net income", flow("NetIncome")),
-            ("buybacks", flow("PaymentsRelatedToRepurchasesOfCommonStock")),
-            ("dividends", flow("DividendsPaid")),
+            ("revenue", flow(.revenue)),
+            ("operating income", flow(.operatingIncome)),
+            ("net income", flow(.netIncome)),
+            ("buybacks", flow(.paymentsRelatedToRepurchasesOfCommonStock)),
+            ("dividends", flow(.dividendsPaid)),
         ]),
         PanelSpec(title: "cash", lines: [
-            ("operating", flow("NetCashProvidedByOperatingActivities")),
-            ("investing", flow("NetCashUsedInInvestingActivities")),
-            ("financing", flow("NetCashUsedInFinancingActivities")),
+            ("operating", flow(.netCashProvidedByOperatingActivities)),
+            ("investing", flow(.netCashUsedInInvestingActivities)),
+            ("financing", flow(.netCashUsedInFinancingActivities)),
         ]),
         PanelSpec(title: "investment", lines: [
-            ("capex", flow("PurchasesRelatedToPropertyAndEquipmentAndIntangibleAssets")),
-            ("depreciation and amortization", flow("DepreciationAndAmoritization")),
-            ("acquisitions", flow("AcquisitionsNetOfCashAcquired")),
+            ("capex", flow(.purchasesRelatedToPropertyAndEquipmentAndIntangibleAssets)),
+            ("depreciation and amortization", flow(.depreciationAndAmoritization)),
+            ("acquisitions", flow(.acquisitionsNetOfCashAcquired)),
         ]),
         // Always the last four quarters, whatever the period picked.
         PanelSpec(title: "return on equity and earnings yield (last four quarters)", lines: [
-            ("return on equity", .market(field: "return_on_equity")),
-            ("earnings yield", .market(field: "earnings_yield")),
+            ("return on equity", .market(.returnOnEquity)),
+            ("earnings yield", .market(.earningsYield)),
         ], format: .percent),
     ]}
 
@@ -200,7 +201,7 @@ struct Dashboard: View {
                 ForEach(side == .stocks ? stocks : flows, id: \.title) { spec in
                     Panel(title: "\(ticker.uppercased()) \(side.rawValue): \(spec.title) (\(currency))",
                           series: spec.lines.map { name, source in
-                              Series(name: name, points: data?[currency]?[source.key] ?? [])
+                              Series(name: name, points: data?[currency]?[source] ?? [])
                           },
                           loading: data == nil && error == nil,
                           format: spec.format ?? .money(currency), log: spec.log)
@@ -218,7 +219,7 @@ struct Dashboard: View {
         }
         .task {
             do {
-                let fetched = try await fetchCompany(ticker, sources: allSources, periods: ["pit", "3m", "12m"])
+                let fetched = try await fetchCompany(ticker, sources: allSources, periods: [.pointInTime, .quarter, .year])
                 // The company's reporting currency: USD if it has it, else
                 // the one with the most series (a Tokyo listing's JPY).
                 if fetched[currency] == nil {

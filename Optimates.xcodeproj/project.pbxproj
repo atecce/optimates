@@ -13,6 +13,10 @@
 		E0000000000000000000A005 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B005 /* Settings.swift */; };
 		E0000000000000000000A007 /* AccessLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B007 /* AccessLogin.swift */; };
 		E0000000000000000000A006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B006 /* Assets.xcassets */; };
+		E0000000000000000000A008 /* equities.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B008 /* equities.pb.swift */; };
+		E0000000000000000000A009 /* equities.connect.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B009 /* equities.connect.swift */; };
+		E0000000000000000000A010 /* Connect in Frameworks */ = {isa = PBXBuildFile; productRef = E0000000000000000000C012 /* Connect */; };
+		E0000000000000000000A011 /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = E0000000000000000000C013 /* SwiftProtobuf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -23,6 +27,8 @@
 		E0000000000000000000B007 /* AccessLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessLogin.swift; sourceTree = "<group>"; };
 		E0000000000000000000B004 /* Optimates.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Optimates.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E0000000000000000000B006 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		E0000000000000000000B008 /* equities.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = equities.pb.swift; sourceTree = "<group>"; };
+		E0000000000000000000B009 /* equities.connect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = equities.connect.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -30,6 +36,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E0000000000000000000A010 /* Connect in Frameworks */,
+				E0000000000000000000A011 /* SwiftProtobuf in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,8 +61,18 @@
 				E0000000000000000000B003 /* Series.swift */,
 				E0000000000000000000B005 /* Settings.swift */,
 				E0000000000000000000B007 /* AccessLogin.swift */,
+				E0000000000000000000E005 /* Generated */,
 			);
 			path = Sources/Optimates;
+			sourceTree = "<group>";
+		};
+		E0000000000000000000E005 /* Generated */ = {
+			isa = PBXGroup;
+			children = (
+				E0000000000000000000B008 /* equities.pb.swift */,
+				E0000000000000000000B009 /* equities.connect.swift */,
+			);
+			path = Generated;
 			sourceTree = "<group>";
 		};
 		E0000000000000000000E004 /* Resources */ = {
@@ -89,6 +107,10 @@
 			dependencies = (
 			);
 			name = Optimates;
+			packageProductDependencies = (
+				E0000000000000000000C012 /* Connect */,
+				E0000000000000000000C013 /* SwiftProtobuf */,
+			);
 			productName = Optimates;
 			productReference = E0000000000000000000B004 /* Optimates.app */;
 			productType = "com.apple.product-type.application";
@@ -112,6 +134,10 @@
 				Base,
 			);
 			mainGroup = E0000000000000000000E001;
+			packageReferences = (
+				E0000000000000000000C010 /* XCRemoteSwiftPackageReference "connect-swift" */,
+				E0000000000000000000C011 /* XCRemoteSwiftPackageReference "swift-protobuf" */,
+			);
 			productRefGroup = E0000000000000000000E003 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -142,6 +168,8 @@
 				E0000000000000000000A003 /* Series.swift in Sources */,
 				E0000000000000000000A005 /* Settings.swift in Sources */,
 				E0000000000000000000A007 /* AccessLogin.swift in Sources */,
+				E0000000000000000000A008 /* equities.pb.swift in Sources */,
+				E0000000000000000000A009 /* equities.connect.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -249,6 +277,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E0000000000000000000C010 /* XCRemoteSwiftPackageReference "connect-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/connectrpc/connect-swift";
+			requirement = {
+				kind = exactVersion;
+				version = 1.2.0;
+			};
+		};
+		E0000000000000000000C011 /* XCRemoteSwiftPackageReference "swift-protobuf" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-protobuf";
+			requirement = {
+				kind = exactVersion;
+				version = 1.34.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E0000000000000000000C012 /* Connect */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E0000000000000000000C010 /* XCRemoteSwiftPackageReference "connect-swift" */;
+			productName = Connect;
+		};
+		E0000000000000000000C013 /* SwiftProtobuf */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E0000000000000000000C011 /* XCRemoteSwiftPackageReference "swift-protobuf" */;
+			productName = SwiftProtobuf;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E0000000000000000000F002 /* Project object */;
 }
