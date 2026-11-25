@@ -11,6 +11,7 @@ Sources/Optimates/     the SwiftUI sources, shared by both
   Generated/           the API's messages and client, from Proto/ (proto.sh)
 Proto/                 the API's contract, equities.proto, copied from lib
 proto.sh               copy the .proto from lib and generate the Swift
+Sources/Optimates/Cache.swift  the most recently used replies, on the device (SwiftData)
 Tests/OptimatesTests/  the contract (golden bytes, shared with lib) and the charts' logic
 ci_scripts/            Xcode Cloud: build with the newest swift-protobuf
 simulator.sh           build and run the iOS app in the Simulator
@@ -88,3 +89,12 @@ regenerates the Swift with that release's generator, all before the build.
 The Mac, which can't build those, keeps the pin and smoke-tests; the
 workflow's test action tests the cloud's build. `OPTIMATES_PINNED=1` in the
 workflow's environment builds the pin instead.
+
+## On the device
+
+The app keeps the API's most recent replies (the company list and the 40
+most recently opened companies) in SwiftData, in Caches: as the protobuf
+bytes that arrived, so the `.proto` stays the only schema. A screen shows
+what's kept at once, marked "Saved …", then replaces it with the API's
+answer; offline, what's kept stays, with why it wasn't updated. The system
+may clear Caches; signing out does.

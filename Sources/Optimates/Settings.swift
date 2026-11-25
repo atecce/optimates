@@ -112,7 +112,10 @@ struct SettingsView: View {
                         if let expires = session.expires {
                             LabeledContent("Until", value: expires.formatted(date: .abbreviated, time: .shortened))
                         }
-                        Button("Sign out", role: .destructive) { settings.accessToken = "" }
+                        Button("Sign out", role: .destructive) {
+                            settings.accessToken = ""
+                            ReplyCache.shared.clear()
+                        }
                     } else {
                         Button(settings.session == nil ? "Sign in with email" : "Session expired: sign in again") {
                             signingIn = true

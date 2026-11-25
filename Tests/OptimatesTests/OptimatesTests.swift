@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import SwiftProtobuf
 import XCTest
 @testable import Optimates
@@ -79,6 +80,51 @@ final class DateRangeTests: XCTestCase {
         let a = utc(2008, 9, 15), b = utc(2009, 3, 9)
         XCTAssertEqual(DateRange.custom.dates(from: a, to: b, now: now), a ... b)
         XCTAssertEqual(DateRange.custom.dates(from: b, to: a, now: now), a ... b)
+    }
+}
+
+/// The device's cache of replies, in memory.
+@MainActor
+final class ReplyCacheTests: XCTestCase {
+    func cache(limit: Int = 40) throws -> ReplyCache {
+        ReplyCache(container: try ModelContainer(for: CachedReply.self,
+                                                 configurations: ModelConfiguration(isStoredInMemoryOnly: true)),
+                   limit: limit)
+    }
+
+    func tickers(_ t: String...) -> Equities_V1_TickersResponse { .with { $0.tickers = t } }
+
+    func testKeepsTheReplyAsSent() throws {
+        let cache = try cache()
+        let at = utc(2026, 11, 25)
+        cache.put("tickers", tickers("AAPL", "GS"), fetched: at)
+        let (kept, fetched) = try XCTUnwrap(cache.get(Equities_V1_TickersResponse.self, "tickers"))
+        XCTAssertEqual(kept.tickers, ["AAPL", "GS"])
+        XCTAssertEqual(fetched, at)
+
+        cache.put("tickers", tickers("NVDA"))
+        XCTAssertEqual(cache.get(Equities_V1_TickersResponse.self, "tickers")?.0.tickers, ["NVDA"])
+        XCTAssertEqual(cache.count, 1)
+        XCTAssertNil(cache.get(Equities_V1_TickersResponse.self, "dashboard/GS"))
+    }
+
+    func testKeepsTheMostRecentlyUsed() throws {
+        let cache = try cache(limit: 2)
+        cache.put("a", tickers("A"), fetched: utc(2026, 1, 1))
+        cache.put("b", tickers("B"), fetched: utc(2026, 1, 2))
+        _ = cache.get(Equities_V1_TickersResponse.self, "a")   // a is now the most recent
+        cache.put("c", tickers("C"))
+        XCTAssertEqual(cache.count, 2)
+        XCTAssertNotNil(cache.get(Equities_V1_TickersResponse.self, "a"))
+        XCTAssertNil(cache.get(Equities_V1_TickersResponse.self, "b"))
+        XCTAssertNotNil(cache.get(Equities_V1_TickersResponse.self, "c"))
+    }
+
+    func testClear() throws {
+        let cache = try cache()
+        cache.put("tickers", tickers("AAPL"))
+        cache.clear()
+        XCTAssertEqual(cache.count, 0)
     }
 }
 

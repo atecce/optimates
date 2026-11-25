@@ -50,26 +50,37 @@ struct ContentView: View {
             SettingsView { loads += 1 }
         }
         .task(id: loads) {
-            loading = true
+            // The list kept from last time, at once; then the API's.
+            if tickers.isEmpty, let (kept, _) = ReplyCache.shared.get(Equities_V1_TickersResponse.self, "tickers") {
+                tickers = kept.tickers
+                openFromEnvironment()
+            }
+            loading = tickers.isEmpty
             defer { loading = false }
             do {
-                tickers = try await API.current().tickers()
+                let reply = try await API.current().call(.tickers, Equities_V1_TickersRequest())
+                ReplyCache.shared.put("tickers", reply)
+                tickers = reply.tickers
                 error = nil
-                // EQUITIES_TICKER=aapl opens a company at launch (simulator.sh).
-                if let t = ProcessInfo.processInfo.environment["EQUITIES_TICKER"]?.uppercased(), tickers.contains(t) {
-                    ticker = t
-                }
+                openFromEnvironment()
             } catch where isCancellation(error) {
                 // A newer load replaces this one.
             } catch {
-                tickers = []
-                self.error = describe(error)
+                // With a kept list, keep showing it (offline, say).
+                if tickers.isEmpty { self.error = describe(error) }
                 // Nothing configured, as on a new phone: ask.
                 switch error {
                 case APIError.signIn: showSettings = true
                 default: break
                 }
             }
+        }
+    }
+
+    /// EQUITIES_TICKER=aapl opens a company at launch (simulator.sh).
+    private func openFromEnvironment() {
+        if ticker == nil, let t = ProcessInfo.processInfo.environment["EQUITIES_TICKER"]?.uppercased(), tickers.contains(t) {
+            ticker = t
         }
     }
 
@@ -131,6 +142,10 @@ struct Dashboard: View {
     /// Everything the two tabs draw, fetched in one query when the company
     /// opens: switching tabs, periods or currencies fetches nothing.
     @State private var data: CompanyData?
+    /// When the API sent what's shown, if it came from the device's cache and
+    /// the API hasn't answered since; why not, if it failed.
+    @State private var keptFrom: Date?
+    @State private var notUpdated: String?
     @State private var error: String?
     // Kept across companies, and across launches.
     @AppStorage("side") private var side = Side.stocks
@@ -244,6 +259,11 @@ struct Dashboard: View {
                 if let error {
                     Text(error).foregroundStyle(.red).font(.callout)
                 }
+                if let keptFrom {
+                    // From the device: the API hasn't answered yet, or couldn't.
+                    Text("Saved \(keptFrom.formatted(.relative(presentation: .named)))" + (notUpdated.map { ": not updated, " + $0 } ?? ", updating…"))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 ForEach(side == .stocks ? stocks : flows, id: \.title) { spec in
                     Panel(title: "\(ticker.uppercased()) \(side.rawValue): \(spec.title) (\(currency))",
                           series: spec.lines.map { name, source in
@@ -266,20 +286,33 @@ struct Dashboard: View {
             }
         }
         .task {
+            // What the device kept from last time, at once; then the API's.
+            let key = "dashboard/\(ticker.uppercased())"
+            if data == nil, let (kept, fetched) = ReplyCache.shared.get(Equities_V1_DashboardResponse.self, key) {
+                show(companyData(kept))
+                keptFrom = fetched
+            }
             do {
-                let fetched = try await fetchCompany(ticker, sources: allSources, periods: [.pointInTime, .quarter, .year])
-                // The company's reporting currency: USD if it has it, else
-                // the one with the most series (a Tokyo listing's JPY).
-                if fetched[currency] == nil {
-                    currency = fetched.max { a, b in a.value.count < b.value.count }?.key ?? currency
-                }
-                data = fetched
+                let request = dashboardRequest(ticker, sources: allSources, periods: [.pointInTime, .quarter, .year])
+                let reply = try await API.current().call(.dashboard, request)
+                ReplyCache.shared.put(key, reply)
+                show(companyData(reply))
+                (keptFrom, notUpdated) = (nil, nil)
             } catch where isCancellation(error) {
                 // Shown again, the view loads again.
             } catch {
-                self.error = describe(error)
+                if data == nil { self.error = describe(error) } else { notUpdated = describe(error) }
             }
         }
+    }
+
+    private func show(_ fetched: CompanyData) {
+        // The company's reporting currency: USD if it has it, else the one
+        // with the most series (a Tokyo listing's JPY).
+        if fetched[currency] == nil {
+            currency = fetched.max { a, b in a.value.count < b.value.count }?.key ?? currency
+        }
+        data = fetched
     }
 }
 

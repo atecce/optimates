@@ -28,10 +28,6 @@ typealias CompanyData = [String: [Source: [Point]]]
 
 /// Everything the given lines need, each item in each of `periods`, every
 /// currency, in one call.
-func fetchCompany(_ ticker: String, sources: [Source], periods: [Equities_V1_Period]) async throws -> CompanyData {
-    companyData(try await API.current().call(.dashboard, dashboardRequest(ticker, sources: sources, periods: periods)))
-}
-
 /// The request for those lines: each item and field once, in the .proto's order.
 func dashboardRequest(_ ticker: String, sources: [Source], periods: [Equities_V1_Period]) -> Equities_V1_DashboardRequest {
     var request = Equities_V1_DashboardRequest()
@@ -111,10 +107,6 @@ struct API {
             headers["CF-Access-Client-Secret"] = token.secret
         }
         return API(base: s.serverURL, headers: headers)
-    }
-
-    func tickers() async throws -> [String] {
-        try await call(.tickers, Equities_V1_TickersRequest()).tickers
     }
 
     func call<Input, Output>(_ method: Method<Input, Output>, _ input: Input) async throws -> Output {

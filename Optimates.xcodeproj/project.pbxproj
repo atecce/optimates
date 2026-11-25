@@ -17,6 +17,7 @@
 		E0000000000000000000A011 /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = E0000000000000000000C013 /* SwiftProtobuf */; };
 		E0000000000000000000A012 /* OptimatesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B010 /* OptimatesTests.swift */; };
 		E0000000000000000000A013 /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = E0000000000000000000C014 /* SwiftProtobuf */; };
+		E0000000000000000000A014 /* Cache.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B012 /* Cache.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -40,6 +41,7 @@
 		E0000000000000000000B008 /* equities.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = equities.pb.swift; sourceTree = "<group>"; };
 		E0000000000000000000B010 /* OptimatesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptimatesTests.swift; sourceTree = "<group>"; };
 		E0000000000000000000B011 /* OptimatesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OptimatesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E0000000000000000000B012 /* Cache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cache.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -80,6 +82,7 @@
 				E0000000000000000000B003 /* Series.swift */,
 				E0000000000000000000B005 /* Settings.swift */,
 				E0000000000000000000B007 /* AccessLogin.swift */,
+				E0000000000000000000B012 /* Cache.swift */,
 				E0000000000000000000E005 /* Generated */,
 			);
 			path = Sources/Optimates;
@@ -215,6 +218,7 @@
 				E0000000000000000000A005 /* Settings.swift in Sources */,
 				E0000000000000000000A007 /* AccessLogin.swift in Sources */,
 				E0000000000000000000A008 /* equities.pb.swift in Sources */,
+				E0000000000000000000A014 /* Cache.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
