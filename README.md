@@ -33,7 +33,10 @@ Swift.
 
 ## TestFlight
 
-Xcode Cloud archives `Optimates` on pushes to `main` and sends the build to
-TestFlight (internal testing). The app reads its data through Cloudflare;
+Xcode Cloud (workflow "Default") archives `Optimates` on every push to
+`main`, prepared for the App Store, so each build is uploaded to App Store
+Connect and appears in TestFlight; an internal testing group with automatic
+distribution sends it to the phone. Nothing goes to the App Store unless
+submitted by hand. The app reads its data through Cloudflare;
 its server token and Cloudflare Access credentials are entered once in the
 app's settings and kept in the Keychain.
