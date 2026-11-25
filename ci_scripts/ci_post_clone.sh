@@ -37,5 +37,12 @@ if ! protoc --version 2>/dev/null | grep -qvE 'libprotoc 3\.([0-9]|1[0-4])\.'; t
 fi
 ./proto.sh --keep
 
-xcodebuild -resolvePackageDependencies -project Optimates.xcodeproj -scheme Optimates
-grep -A4 '"swift-protobuf"' Optimates.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+# Xcode Cloud builds with automatic package resolution off, so the project
+# needs its own resolved file. proto.sh's swift build has just written one
+# for the new pin; the project's is the same pins, without the hash of
+# Package.swift's dependencies (originHash, which Xcode computes for the
+# project instead and accepts missing).
+resolved=Optimates.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+mkdir -p ${resolved:h}
+sed -e '/"originHash"/d' -e 's/"version" : 3/"version" : 2/' Package.resolved > $resolved
+xcodebuild -resolvePackageDependencies -disableAutomaticPackageResolution -project Optimates.xcodeproj -scheme Optimates
