@@ -21,7 +21,6 @@ The app makes two calls, `Tickers` and `Dashboard`, to
 reached through a Cloudflare tunnel. Cloudflare Access stands in front of
 it, and the service checks Access's signed assertion on every request too.
 
-
 ## The contract
 
 `Proto/equities/v1/equities.proto` is the API, the same file lib serves
@@ -40,6 +39,8 @@ The packages are pinned exactly, the same in `Package.swift` and
 `Optimates.xcodeproj`, and `proto.sh` builds the generators from them, so
 generated code and runtime match. connect-swift 1.2.0 and swift-protobuf
 1.34.1 are the last releases that build with Xcode 15.4 (Swift 5.10).
+
+## Signing in
 
 The app gets through Access in one of two ways:
 
