@@ -15,7 +15,19 @@
 		E0000000000000000000A006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B006 /* Assets.xcassets */; };
 		E0000000000000000000A008 /* equities.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B008 /* equities.pb.swift */; };
 		E0000000000000000000A011 /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = E0000000000000000000C013 /* SwiftProtobuf */; };
+		E0000000000000000000A012 /* OptimatesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000000000000000000B010 /* OptimatesTests.swift */; };
+		E0000000000000000000A013 /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = E0000000000000000000C014 /* SwiftProtobuf */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		E0000000000000000000A101 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E0000000000000000000F002 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E0000000000000000000F001;
+			remoteInfo = Optimates;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		E0000000000000000000B001 /* OptimatesApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptimatesApp.swift; sourceTree = "<group>"; };
@@ -26,6 +38,8 @@
 		E0000000000000000000B004 /* Optimates.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Optimates.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E0000000000000000000B006 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E0000000000000000000B008 /* equities.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = equities.pb.swift; sourceTree = "<group>"; };
+		E0000000000000000000B010 /* OptimatesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptimatesTests.swift; sourceTree = "<group>"; };
+		E0000000000000000000B011 /* OptimatesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OptimatesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,6 +51,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E0000000000000000000D005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E0000000000000000000A013 /* SwiftProtobuf in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -45,6 +67,7 @@
 			children = (
 				E0000000000000000000E002 /* Sources/Optimates */,
 				E0000000000000000000E004 /* Resources */,
+				E0000000000000000000E006 /* Tests/OptimatesTests */,
 				E0000000000000000000E003 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -70,6 +93,14 @@
 			path = Generated;
 			sourceTree = "<group>";
 		};
+		E0000000000000000000E006 /* Tests/OptimatesTests */ = {
+			isa = PBXGroup;
+			children = (
+				E0000000000000000000B010 /* OptimatesTests.swift */,
+			);
+			path = Tests/OptimatesTests;
+			sourceTree = "<group>";
+		};
 		E0000000000000000000E004 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -82,6 +113,7 @@
 			isa = PBXGroup;
 			children = (
 				E0000000000000000000B004 /* Optimates.app */,
+				E0000000000000000000B011 /* OptimatesTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -108,6 +140,26 @@
 			productName = Optimates;
 			productReference = E0000000000000000000B004 /* Optimates.app */;
 			productType = "com.apple.product-type.application";
+		};
+		E0000000000000000000F003 /* OptimatesTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E000000000000000000010A3 /* Build configuration list for PBXNativeTarget "OptimatesTests" */;
+			buildPhases = (
+				E0000000000000000000D004 /* Sources */,
+				E0000000000000000000D005 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E0000000000000000000A102 /* PBXTargetDependency */,
+			);
+			name = OptimatesTests;
+			packageProductDependencies = (
+				E0000000000000000000C014 /* SwiftProtobuf */,
+			);
+			productName = OptimatesTests;
+			productReference = E0000000000000000000B011 /* OptimatesTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -136,6 +188,7 @@
 			projectRoot = "";
 			targets = (
 				E0000000000000000000F001 /* Optimates */,
+				E0000000000000000000F003 /* OptimatesTests */,
 			);
 		};
 /* End PBXProject section */
@@ -165,7 +218,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E0000000000000000000D004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E0000000000000000000A012 /* OptimatesTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		E0000000000000000000A102 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E0000000000000000000F001 /* Optimates */;
+			targetProxy = E0000000000000000000A101 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		E000000000000000000010B1 /* Debug */ = {
@@ -199,17 +268,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = Optimates;
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Optimates reads its data from InfluxDB on your Mac.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 0.1;
-				OTHER_LDFLAGS = (
-					"-framework",
-					SystemConfiguration,
-					"-framework",
-					Security,
-				);
 				PRODUCT_BUNDLE_IDENTIFIER = pub.atec.optimates;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -228,22 +290,49 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = Optimates;
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Optimates reads its data from InfluxDB on your Mac.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 0.1;
-				OTHER_LDFLAGS = (
-					"-framework",
-					SystemConfiguration,
-					"-framework",
-					Security,
-				);
 				PRODUCT_BUNDLE_IDENTIFIER = pub.atec.optimates;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		E000000000000000000010B5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = Y82E2K77P5;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = pub.atec.optimates.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Optimates.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Optimates";
+			};
+			name = Debug;
+		};
+		E000000000000000000010B6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = Y82E2K77P5;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = pub.atec.optimates.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Optimates.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Optimates";
 			};
 			name = Release;
 		};
@@ -255,6 +344,15 @@
 			buildConfigurations = (
 				E000000000000000000010B3 /* Debug */,
 				E000000000000000000010B4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E000000000000000000010A3 /* Build configuration list for PBXNativeTarget "OptimatesTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E000000000000000000010B5 /* Debug */,
+				E000000000000000000010B6 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -283,6 +381,11 @@
 
 /* Begin XCSwiftPackageProductDependency section */
 		E0000000000000000000C013 /* SwiftProtobuf */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E0000000000000000000C011 /* XCRemoteSwiftPackageReference "swift-protobuf" */;
+			productName = SwiftProtobuf;
+		};
+		E0000000000000000000C014 /* SwiftProtobuf */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = E0000000000000000000C011 /* XCRemoteSwiftPackageReference "swift-protobuf" */;
 			productName = SwiftProtobuf;

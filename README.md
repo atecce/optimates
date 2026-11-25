@@ -11,6 +11,8 @@ Sources/Optimates/     the SwiftUI sources, shared by both
   Generated/           the API's messages and client, from Proto/ (proto.sh)
 Proto/                 the API's contract, equities.proto, copied from lib
 proto.sh               copy the .proto from lib and generate the Swift
+Tests/OptimatesTests/  the contract (golden bytes, shared with lib) and the charts' logic
+ci_scripts/            Xcode Cloud: build with the newest swift-protobuf
 simulator.sh           build and run the iOS app in the Simulator
 ```
 
@@ -69,3 +71,20 @@ Xcode Cloud (workflow "Default") archives `Optimates` on every push to
 Connect and appears in TestFlight; the internal testing group 家人 (jiārén),
 with automatic distribution, sends it to the phone. Nothing goes to the App
 Store unless submitted by hand.
+
+## Tests and the newest dependencies
+
+`swift test` on the Mac, or the scheme's test action (the `OptimatesTests`
+target, in the Simulator), runs the tests:
+
+- the contract: a request and a response as hex, the same bytes lib's
+  `equities/api` tests write with Rust, read and written here with the Swift
+  generated from the same `.proto`;
+- what the charts compute from the data (the crosshair's values).
+
+Xcode Cloud builds with the newest swift-protobuf 1.x, not the pin:
+`ci_scripts/ci_post_clone.sh` raises the pin, resolves the packages again and
+regenerates the Swift with that release's generator, all before the build.
+The Mac, which can't build those, keeps the pin and smoke-tests; the
+workflow's test action tests the cloud's build. `OPTIMATES_PINNED=1` in the
+workflow's environment builds the pin instead.

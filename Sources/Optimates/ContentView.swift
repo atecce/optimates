@@ -265,15 +265,11 @@ struct Panel: View {
     /// them (Grafana's shared crosshair). nil when no finger is down.
     @Binding var selected: Date?
 
-    /// Each line's value at the crosshair: its last point on or before it,
-    /// as a dashboard reads a quarter's figure until the next. None for a
-    /// line that ended over a year before (a delisting, a change of currency).
+    /// Each line's value at the crosshair (`Series.value(at:)`).
     private var readout: [(name: String, color: Color, value: Double)] {
         guard let selected else { return [] }
         return series.enumerated().compactMap { i, s in
-            guard let p = s.points.last(where: { $0.time <= selected }),
-                  selected.timeIntervalSince(p.time) < 400 * 86_400 else { return nil }
-            return (s.name, palette[i % palette.count], p.value)
+            s.value(at: selected).map { (s.name, palette[i % palette.count], $0) }
         }
     }
 

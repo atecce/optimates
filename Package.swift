@@ -25,5 +25,12 @@ let package = Package(
                 .product(name: "SwiftProtobuf", package: "swift-protobuf"),
             ]
         ),
+        .testTarget(
+            name: "OptimatesTests",
+            dependencies: [
+                "Optimates",
+                .product(name: "SwiftProtobuf", package: "swift-protobuf"),
+            ]
+        ),
     ]
 )

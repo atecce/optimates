@@ -29,6 +29,11 @@ typealias CompanyData = [String: [Source: [Point]]]
 /// Everything the given lines need, each item in each of `periods`, every
 /// currency, in one call.
 func fetchCompany(_ ticker: String, sources: [Source], periods: [Equities_V1_Period]) async throws -> CompanyData {
+    companyData(try await API.current().call(.dashboard, dashboardRequest(ticker, sources: sources, periods: periods)))
+}
+
+/// The request for those lines: each item and field once, in the .proto's order.
+func dashboardRequest(_ ticker: String, sources: [Source], periods: [Equities_V1_Period]) -> Equities_V1_DashboardRequest {
     var request = Equities_V1_DashboardRequest()
     request.ticker = ticker
     request.periods = periods
@@ -41,8 +46,12 @@ func fetchCompany(_ ticker: String, sources: [Source], periods: [Equities_V1_Per
     }
     request.items = items.sorted { $0.rawValue < $1.rawValue }
     request.market = fields.sorted { $0.rawValue < $1.rawValue }
+    return request
+}
 
-    let response = try await API.current().call(.dashboard, request)
+/// A dashboard reply as the charts read it: each series under its currency and
+/// line, its days as dates.
+func companyData(_ response: Equities_V1_DashboardResponse) -> CompanyData {
     var data = CompanyData()
     for series in response.series {
         let source: Source
@@ -154,6 +163,17 @@ struct API {
                         newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
             completionHandler(nil)
         }
+    }
+}
+
+/// A line's value at `date`: its last point on or before it, as a dashboard
+/// reads a quarter's figure until the next. nil before its first point, and
+/// over a year after its last (a delisting, a change of currency).
+extension Series {
+    func value(at date: Date) -> Double? {
+        guard let p = points.last(where: { $0.time <= date }),
+              date.timeIntervalSince(p.time) < 400 * 86_400 else { return nil }
+        return p.value
     }
 }
 

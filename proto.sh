@@ -5,12 +5,14 @@
 # `Method`s, one per rpc of the .proto's service.
 #
 #     ./proto.sh [LIB]      LIB: a checkout of atecce/lib (default ~/lib)
+#     ./proto.sh --keep     regenerate from Proto/ as committed (Xcode Cloud)
 #
 # The generator is built from the swift-protobuf Package.swift pins, the one
 # the app links, so generated code and runtime always match. Needs protoc
 # 3.15 or later (brew install protobuf).
 
 lib=${1:-$HOME/lib}
+keep=; [ "$1" = --keep ] && keep=1
 # The directory this script is in.
 cd ${0:A:h} || exit 1
 
@@ -22,8 +24,10 @@ case $version in
 esac
 
 proto=equities/v1/equities.proto
-[ -f $lib/equities/api/proto/$proto ] || { echo "no $lib/equities/api/proto/$proto" >&2; exit 1 }
-mkdir -p Proto/${proto:h} && cp $lib/equities/api/proto/$proto Proto/$proto || exit 1
+if [ -z "$keep" ]; then
+  [ -f $lib/equities/api/proto/$proto ] || { echo "no $lib/equities/api/proto/$proto" >&2; exit 1 }
+  mkdir -p Proto/${proto:h} && cp $lib/equities/api/proto/$proto Proto/$proto || exit 1
+fi
 
 swift build -c release --product protoc-gen-swift -q || exit 1
 bin=$(swift build -c release --show-bin-path)
