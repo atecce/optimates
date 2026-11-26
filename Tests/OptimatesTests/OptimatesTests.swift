@@ -14,6 +14,15 @@ final class ContractTests: XCTestCase {
     // JPY, 1970-01-01: -2 and 1970-01-02: 0.25
     static let goldenResponse = "0a1a0a04081610051a03555344220d08bfa0011100008079efd37542 0a1f10021a034a505922091100000000000000c0220b080111000000000000d03f"
 
+    /// The premium on r in points a year, from annual rates (invented).
+    func testPremiumInPointsAYear() {
+        XCTAssertEqual(premium(0.075, 0.042), "+3.3 pts/yr")
+        XCTAssertEqual(premium(0.02, 0.045), "-2.5 pts/yr")
+        XCTAssertNil(premium(nil, 0.042))
+        XCTAssertTrue(againstR(12, rate: 0.075, base: 0.042).hasSuffix(" · +3.3 pts/yr"))
+        XCTAssertFalse(againstR(12).contains("pts"))
+    }
+
     func testRequestIsWhatTheServerReads() throws {
         // As the dashboard builds it: lines in any order, items and fields once.
         let request = dashboardRequest("gs", sources: [

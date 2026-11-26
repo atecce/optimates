@@ -27,7 +27,8 @@ struct PortfolioView: View {
             }
             if let reply {
                 Section {
-                    Totals(positions: reply.accounts.flatMap(\.positions), balance: reply.accounts.map(\.balance).reduce(0, +), baseline: reply.baseline, market: reply.market)
+                    Totals(positions: reply.accounts.flatMap(\.positions), balance: reply.accounts.map(\.balance).reduce(0, +), baseline: reply.baseline, market: reply.market,
+                           rates: (reply.annualRate, reply.baselineRate, reply.marketRate))
                 } footer: {
                     if reply.syncedUnix > 0 {
                         Text("Synced with the brokerage \(Date(timeIntervalSince1970: TimeInterval(reply.syncedUnix)).formatted(.relative(presentation: .named))). Pull to refresh.")
@@ -35,7 +36,8 @@ struct PortfolioView: View {
                 }
                 ForEach(reply.accounts, id: \.name) { account in
                     Section {
-                        Totals(positions: account.positions, balance: account.balance, baseline: reply.baseline, market: reply.market)
+                        Totals(positions: account.positions, balance: account.balance, baseline: reply.baseline, market: reply.market,
+                               rates: (account.annualRate, account.baselineRate, account.marketRate))
                         let positions = ordered(account.positions)
                         let all = expanded.contains(account.name)
                         ForEach(Array((all ? positions : Array(positions.prefix(Self.shownAtFirst))).enumerated()), id: \.offset) { _, p in
@@ -129,14 +131,27 @@ func overMarket(_ positions: [Equities_V1_Position]) -> (gain: Double, market: D
             measured.count, longs.count)
 }
 
-/// "over r +$12.00" or "under r -$3.00".
-func againstR(_ excess: Double) -> String { against("r", excess) }
+/// "over r +$12.00", or with annual rates "over r +$12.00 · +3.1 pts/yr":
+/// the premium on r, your annual rate minus r's (XIRR, CAPITAL.md).
+func againstR(_ excess: Double, rate: Double? = nil, base: Double? = nil) -> String {
+    against("r", excess, rate, base)
+}
 
-/// "over market +$12.00" or "under market -$3.00".
-func againstMarket(_ excess: Double) -> String { against("market", excess) }
+/// "over market +$12.00" or "under market -$3.00 · -1.8 pts/yr".
+func againstMarket(_ excess: Double, rate: Double? = nil, base: Double? = nil) -> String {
+    against("market", excess, rate, base)
+}
 
-private func against(_ what: String, _ excess: Double) -> String {
+/// The premium in percentage points a year, "+3.1 pts/yr", when both rates are known.
+func premium(_ rate: Double?, _ base: Double?) -> String? {
+    guard let rate, let base else { return nil }
+    let points = (rate - base) * 100
+    return (points >= 0 ? "+" : "") + points.formatted(.number.precision(.fractionLength(1))) + " pts/yr"
+}
+
+private func against(_ what: String, _ excess: Double, _ rate: Double?, _ base: Double?) -> String {
     (excess >= 0 ? "over \(what) +" : "under \(what) ") + excess.formatted(.currency(code: "USD"))
+        + (premium(rate, base).map { " · " + $0 } ?? "")
 }
 
 private func dollars(_ v: Double) -> String { v.formatted(.currency(code: "USD")) }
@@ -152,6 +167,8 @@ private struct Totals: View {
     let balance: Double
     let baseline: String
     let market: String
+    /// Annual rates (yours, r's, the market's), from the API.
+    var rates: (Double?, Double?, Double?) = (nil, nil, nil)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -174,7 +191,7 @@ private struct Totals: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1).minimumScaleFactor(0.75)
                     Spacer()
-                    Text(againstR(m.gain - m.baseline)).monospacedDigit()
+                    Text(againstR(m.gain - m.baseline, rate: rates.0, base: rates.1)).monospacedDigit()
                         .foregroundStyle(m.gain - m.baseline >= 0 ? Color.green : Color.red)
                 }
                 .font(.caption)
@@ -185,12 +202,12 @@ private struct Totals: View {
                             .foregroundStyle(.secondary)
                             .lineLimit(1).minimumScaleFactor(0.75)
                         Spacer()
-                        Text(againstMarket(k.gain - k.market)).monospacedDigit()
+                        Text(againstMarket(k.gain - k.market, rate: rates.0, base: rates.2)).monospacedDigit()
                             .foregroundStyle(k.gain - k.market >= 0 ? Color.green : Color.red)
                     }
                     .font(.caption)
                 }
-                Text("Dividends and distributions on all sides, on \(m.measured) of \(m.of) positions: the ones whose buys are all in the last two years")
+                Text("Dividends and distributions on all sides, on \(m.measured) of \(m.of) positions: the ones whose buys are all in the last two years. Points a year: the premium of your annual rate (XIRR) over theirs, on positions held a year or more.")
                     .font(.caption2).foregroundStyle(.secondary)
             }
         }
@@ -224,16 +241,34 @@ private struct PositionRow: View {
                         .foregroundStyle(gain >= 0 ? Color.green : Color.red)
                 }
                 if let m = overBaseline([position]) {
-                    Text(againstR(m.gain - m.baseline))
+                    Text(againstR(m.gain - m.baseline, rate: position.annualRate, base: position.baselineRate))
                         .font(.caption2).monospacedDigit()
                         .foregroundStyle(m.gain - m.baseline >= 0 ? Color.green : Color.red)
                 }
                 if let k = overMarket([position]) {
-                    Text(againstMarket(k.gain - k.market))
+                    Text(againstMarket(k.gain - k.market, rate: position.annualRate, base: position.marketRate))
                         .font(.caption2).monospacedDigit()
                         .foregroundStyle(k.gain - k.market >= 0 ? Color.green : Color.red)
                 }
             }
         }
     }
+}
+
+// Optional proto fields as Swift optionals: the annual rates (XIRR), set
+// only when solvable over a year or more.
+extension Equities_V1_Position {
+    var annualRate: Double? { hasAnnualReturn ? annualReturn : nil }
+    var baselineRate: Double? { hasBaselineAnnual ? baselineAnnual : nil }
+    var marketRate: Double? { hasMarketAnnual ? marketAnnual : nil }
+}
+extension Equities_V1_Account {
+    var annualRate: Double? { hasAnnualReturn ? annualReturn : nil }
+    var baselineRate: Double? { hasBaselineAnnual ? baselineAnnual : nil }
+    var marketRate: Double? { hasMarketAnnual ? marketAnnual : nil }
+}
+extension Equities_V1_HoldingsResponse {
+    var annualRate: Double? { hasAnnualReturn ? annualReturn : nil }
+    var baselineRate: Double? { hasBaselineAnnual ? baselineAnnual : nil }
+    var marketRate: Double? { hasMarketAnnual ? marketAnnual : nil }
 }

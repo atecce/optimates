@@ -820,9 +820,44 @@ struct Equities_V1_HoldingsResponse: Sendable {
 
   var marketEpochDay: Int32 = 0
 
+  /// The portfolio's annual rates (XIRR, money-weighted; CAPITAL.md "Rates
+  /// of return"), over the positions held a year or more: yours, dividends
+  /// in; MINT's and the market's on the same dollars and days. The premium
+  /// on r is annual_return - baseline_annual. Unset when not solvable.
+  var annualReturn: Double {
+    get {_annualReturn ?? 0}
+    set {_annualReturn = newValue}
+  }
+  /// Returns true if `annualReturn` has been explicitly set.
+  var hasAnnualReturn: Bool {self._annualReturn != nil}
+  /// Clears the value of `annualReturn`. Subsequent reads from it will return its default value.
+  mutating func clearAnnualReturn() {self._annualReturn = nil}
+
+  var baselineAnnual: Double {
+    get {_baselineAnnual ?? 0}
+    set {_baselineAnnual = newValue}
+  }
+  /// Returns true if `baselineAnnual` has been explicitly set.
+  var hasBaselineAnnual: Bool {self._baselineAnnual != nil}
+  /// Clears the value of `baselineAnnual`. Subsequent reads from it will return its default value.
+  mutating func clearBaselineAnnual() {self._baselineAnnual = nil}
+
+  var marketAnnual: Double {
+    get {_marketAnnual ?? 0}
+    set {_marketAnnual = newValue}
+  }
+  /// Returns true if `marketAnnual` has been explicitly set.
+  var hasMarketAnnual: Bool {self._marketAnnual != nil}
+  /// Clears the value of `marketAnnual`. Subsequent reads from it will return its default value.
+  mutating func clearMarketAnnual() {self._marketAnnual = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
+
+  fileprivate var _annualReturn: Double? = nil
+  fileprivate var _baselineAnnual: Double? = nil
+  fileprivate var _marketAnnual: Double? = nil
 }
 
 struct Equities_V1_Account: Sendable {
@@ -842,9 +877,41 @@ struct Equities_V1_Account: Sendable {
 
   var positions: [Equities_V1_Position] = []
 
+  /// The account's annual rates, as HoldingsResponse's.
+  var annualReturn: Double {
+    get {_annualReturn ?? 0}
+    set {_annualReturn = newValue}
+  }
+  /// Returns true if `annualReturn` has been explicitly set.
+  var hasAnnualReturn: Bool {self._annualReturn != nil}
+  /// Clears the value of `annualReturn`. Subsequent reads from it will return its default value.
+  mutating func clearAnnualReturn() {self._annualReturn = nil}
+
+  var baselineAnnual: Double {
+    get {_baselineAnnual ?? 0}
+    set {_baselineAnnual = newValue}
+  }
+  /// Returns true if `baselineAnnual` has been explicitly set.
+  var hasBaselineAnnual: Bool {self._baselineAnnual != nil}
+  /// Clears the value of `baselineAnnual`. Subsequent reads from it will return its default value.
+  mutating func clearBaselineAnnual() {self._baselineAnnual = nil}
+
+  var marketAnnual: Double {
+    get {_marketAnnual ?? 0}
+    set {_marketAnnual = newValue}
+  }
+  /// Returns true if `marketAnnual` has been explicitly set.
+  var hasMarketAnnual: Bool {self._marketAnnual != nil}
+  /// Clears the value of `marketAnnual`. Subsequent reads from it will return its default value.
+  mutating func clearMarketAnnual() {self._marketAnnual = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
+
+  fileprivate var _annualReturn: Double? = nil
+  fileprivate var _baselineAnnual: Double? = nil
+  fileprivate var _marketAnnual: Double? = nil
 }
 
 struct Equities_V1_Position: Sendable {
@@ -935,6 +1002,35 @@ struct Equities_V1_Position: Sendable {
   /// Clears the value of `marketValue`. Subsequent reads from it will return its default value.
   mutating func clearMarketValue() {self._marketValue = nil}
 
+  /// The position's annual rates, as HoldingsResponse's: set only when its
+  /// oldest held buy is a year old or more (shorter rates aren't annualized).
+  var annualReturn: Double {
+    get {_annualReturn ?? 0}
+    set {_annualReturn = newValue}
+  }
+  /// Returns true if `annualReturn` has been explicitly set.
+  var hasAnnualReturn: Bool {self._annualReturn != nil}
+  /// Clears the value of `annualReturn`. Subsequent reads from it will return its default value.
+  mutating func clearAnnualReturn() {self._annualReturn = nil}
+
+  var baselineAnnual: Double {
+    get {_baselineAnnual ?? 0}
+    set {_baselineAnnual = newValue}
+  }
+  /// Returns true if `baselineAnnual` has been explicitly set.
+  var hasBaselineAnnual: Bool {self._baselineAnnual != nil}
+  /// Clears the value of `baselineAnnual`. Subsequent reads from it will return its default value.
+  mutating func clearBaselineAnnual() {self._baselineAnnual = nil}
+
+  var marketAnnual: Double {
+    get {_marketAnnual ?? 0}
+    set {_marketAnnual = newValue}
+  }
+  /// Returns true if `marketAnnual` has been explicitly set.
+  var hasMarketAnnual: Bool {self._marketAnnual != nil}
+  /// Clears the value of `marketAnnual`. Subsequent reads from it will return its default value.
+  mutating func clearMarketAnnual() {self._marketAnnual = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -944,6 +1040,9 @@ struct Equities_V1_Position: Sendable {
   fileprivate var _baselineValue: Double? = nil
   fileprivate var _dividends: Double? = nil
   fileprivate var _marketValue: Double? = nil
+  fileprivate var _annualReturn: Double? = nil
+  fileprivate var _baselineAnnual: Double? = nil
+  fileprivate var _marketAnnual: Double? = nil
 }
 
 struct Equities_V1_MacroRequest: Sendable {
@@ -1312,7 +1411,7 @@ extension Equities_V1_HoldingsRequest: SwiftProtobuf.Message, SwiftProtobuf._Mes
 
 extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".HoldingsResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}accounts\0\u{3}synced_unix\0\u{1}baseline\0\u{3}baseline_epoch_day\0\u{1}market\0\u{3}market_epoch_day\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}accounts\0\u{3}synced_unix\0\u{1}baseline\0\u{3}baseline_epoch_day\0\u{1}market\0\u{3}market_epoch_day\0\u{3}annual_return\0\u{3}baseline_annual\0\u{3}market_annual\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1326,12 +1425,19 @@ extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
       case 4: try { try decoder.decodeSingularInt32Field(value: &self.baselineEpochDay) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.market) }()
       case 6: try { try decoder.decodeSingularInt32Field(value: &self.marketEpochDay) }()
+      case 7: try { try decoder.decodeSingularDoubleField(value: &self._annualReturn) }()
+      case 8: try { try decoder.decodeSingularDoubleField(value: &self._baselineAnnual) }()
+      case 9: try { try decoder.decodeSingularDoubleField(value: &self._marketAnnual) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.accounts.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.accounts, fieldNumber: 1)
     }
@@ -1350,6 +1456,15 @@ extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
     if self.marketEpochDay != 0 {
       try visitor.visitSingularInt32Field(value: self.marketEpochDay, fieldNumber: 6)
     }
+    try { if let v = self._annualReturn {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 7)
+    } }()
+    try { if let v = self._baselineAnnual {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 8)
+    } }()
+    try { if let v = self._marketAnnual {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 9)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1360,6 +1475,9 @@ extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
     if lhs.baselineEpochDay != rhs.baselineEpochDay {return false}
     if lhs.market != rhs.market {return false}
     if lhs.marketEpochDay != rhs.marketEpochDay {return false}
+    if lhs._annualReturn != rhs._annualReturn {return false}
+    if lhs._baselineAnnual != rhs._baselineAnnual {return false}
+    if lhs._marketAnnual != rhs._marketAnnual {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1367,7 +1485,7 @@ extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 extension Equities_V1_Account: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Account"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}institution\0\u{1}name\0\u{1}subtype\0\u{1}balance\0\u{1}positions\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}institution\0\u{1}name\0\u{1}subtype\0\u{1}balance\0\u{1}positions\0\u{3}annual_return\0\u{3}baseline_annual\0\u{3}market_annual\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1380,12 +1498,19 @@ extension Equities_V1_Account: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
       case 3: try { try decoder.decodeSingularStringField(value: &self.subtype) }()
       case 4: try { try decoder.decodeSingularDoubleField(value: &self.balance) }()
       case 5: try { try decoder.decodeRepeatedMessageField(value: &self.positions) }()
+      case 6: try { try decoder.decodeSingularDoubleField(value: &self._annualReturn) }()
+      case 7: try { try decoder.decodeSingularDoubleField(value: &self._baselineAnnual) }()
+      case 8: try { try decoder.decodeSingularDoubleField(value: &self._marketAnnual) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.institution.isEmpty {
       try visitor.visitSingularStringField(value: self.institution, fieldNumber: 1)
     }
@@ -1401,6 +1526,15 @@ extension Equities_V1_Account: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
     if !self.positions.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.positions, fieldNumber: 5)
     }
+    try { if let v = self._annualReturn {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 6)
+    } }()
+    try { if let v = self._baselineAnnual {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 7)
+    } }()
+    try { if let v = self._marketAnnual {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 8)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1410,6 +1544,9 @@ extension Equities_V1_Account: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
     if lhs.subtype != rhs.subtype {return false}
     if lhs.balance != rhs.balance {return false}
     if lhs.positions != rhs.positions {return false}
+    if lhs._annualReturn != rhs._annualReturn {return false}
+    if lhs._baselineAnnual != rhs._baselineAnnual {return false}
+    if lhs._marketAnnual != rhs._marketAnnual {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1417,7 +1554,7 @@ extension Equities_V1_Account: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
 
 extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Position"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ticker\0\u{1}name\0\u{1}kind\0\u{1}quantity\0\u{1}price\0\u{1}value\0\u{1}cost\0\u{3}cost_source\0\u{3}price_epoch_day\0\u{3}baseline_cost\0\u{3}baseline_value\0\u{1}dividends\0\u{3}market_value\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ticker\0\u{1}name\0\u{1}kind\0\u{1}quantity\0\u{1}price\0\u{1}value\0\u{1}cost\0\u{3}cost_source\0\u{3}price_epoch_day\0\u{3}baseline_cost\0\u{3}baseline_value\0\u{1}dividends\0\u{3}market_value\0\u{3}annual_return\0\u{3}baseline_annual\0\u{3}market_annual\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1438,6 +1575,9 @@ extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
       case 11: try { try decoder.decodeSingularDoubleField(value: &self._baselineValue) }()
       case 12: try { try decoder.decodeSingularDoubleField(value: &self._dividends) }()
       case 13: try { try decoder.decodeSingularDoubleField(value: &self._marketValue) }()
+      case 14: try { try decoder.decodeSingularDoubleField(value: &self._annualReturn) }()
+      case 15: try { try decoder.decodeSingularDoubleField(value: &self._baselineAnnual) }()
+      case 16: try { try decoder.decodeSingularDoubleField(value: &self._marketAnnual) }()
       default: break
       }
     }
@@ -1487,6 +1627,15 @@ extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
     try { if let v = self._marketValue {
       try visitor.visitSingularDoubleField(value: v, fieldNumber: 13)
     } }()
+    try { if let v = self._annualReturn {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 14)
+    } }()
+    try { if let v = self._baselineAnnual {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 15)
+    } }()
+    try { if let v = self._marketAnnual {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 16)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1504,6 +1653,9 @@ extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
     if lhs._baselineValue != rhs._baselineValue {return false}
     if lhs._dividends != rhs._dividends {return false}
     if lhs._marketValue != rhs._marketValue {return false}
+    if lhs._annualReturn != rhs._annualReturn {return false}
+    if lhs._baselineAnnual != rhs._baselineAnnual {return false}
+    if lhs._marketAnnual != rhs._marketAnnual {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
