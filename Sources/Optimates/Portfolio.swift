@@ -207,7 +207,7 @@ private struct Totals: View {
                     }
                     .font(.caption)
                 }
-                Text("Dividends and distributions on all sides, on \(m.measured) of \(m.of) positions: the ones whose buys are all in the last two years. Points a year: the premium of your annual rate (XIRR) over theirs, on positions held a year or more.")
+                Text("Dividends and distributions on all sides, on \(m.measured) of \(m.of) positions: the ones whose buys are all on record (Plaid's two years, and the brokerage's reports before them). Points a year: the premium of your annual rate (XIRR) over theirs, on positions held a year or more.")
                     .font(.caption2).foregroundStyle(.secondary)
             }
         }
