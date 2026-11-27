@@ -67,15 +67,22 @@ final class ReplyCache {
 
     /// Application Support/replies/replies.store; the folder excluded from
     /// backup. (The cache was in Caches before, where iOS may empty it.)
+    /// On the Mac (not sandboxed) Application Support is the user's shared
+    /// one: there, under Optimates/.
     private static func openStore() -> ModelContainer? {
-        var dir = URL.applicationSupportDirectory.appending(path: "replies", directoryHint: .isDirectory)
+        #if os(macOS)
+        let base = URL.applicationSupportDirectory.appending(path: "Optimates", directoryHint: .isDirectory)
+        #else
+        let base = URL.applicationSupportDirectory
+        #endif
+        var dir = base.appending(path: "replies", directoryHint: .isDirectory)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         var values = URLResourceValues()
         values.isExcludedFromBackup = true
         try? dir.setResourceValues(values)
         try? FileManager.default.removeItem(at: URL.cachesDirectory.appending(path: "replies.store"))
         return try? ModelContainer(for: CachedReply.self,
-                                   configurations: ModelConfiguration(url: dir.appending(path: "replies.store")))
+                                   configurations: ModelConfiguration("replies", url: dir.appending(path: "replies.store")))
     }
 
     /// No container (the store couldn't open): nothing is cached.
