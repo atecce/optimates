@@ -851,6 +851,17 @@ struct Equities_V1_HoldingsResponse: Sendable {
   /// Clears the value of `marketAnnual`. Subsequent reads from it will return its default value.
   mutating func clearMarketAnnual() {self._marketAnnual = nil}
 
+  /// The annual rate of r10, the 10-year Treasury yield locked in on each
+  /// buy day (CAPITAL.md, "The premium on r"): the long-run hurdle.
+  var r10Annual: Double {
+    get {_r10Annual ?? 0}
+    set {_r10Annual = newValue}
+  }
+  /// Returns true if `r10Annual` has been explicitly set.
+  var hasR10Annual: Bool {self._r10Annual != nil}
+  /// Clears the value of `r10Annual`. Subsequent reads from it will return its default value.
+  mutating func clearR10Annual() {self._r10Annual = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -858,6 +869,7 @@ struct Equities_V1_HoldingsResponse: Sendable {
   fileprivate var _annualReturn: Double? = nil
   fileprivate var _baselineAnnual: Double? = nil
   fileprivate var _marketAnnual: Double? = nil
+  fileprivate var _r10Annual: Double? = nil
 }
 
 struct Equities_V1_Account: Sendable {
@@ -905,6 +917,15 @@ struct Equities_V1_Account: Sendable {
   /// Clears the value of `marketAnnual`. Subsequent reads from it will return its default value.
   mutating func clearMarketAnnual() {self._marketAnnual = nil}
 
+  var r10Annual: Double {
+    get {_r10Annual ?? 0}
+    set {_r10Annual = newValue}
+  }
+  /// Returns true if `r10Annual` has been explicitly set.
+  var hasR10Annual: Bool {self._r10Annual != nil}
+  /// Clears the value of `r10Annual`. Subsequent reads from it will return its default value.
+  mutating func clearR10Annual() {self._r10Annual = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -912,44 +933,69 @@ struct Equities_V1_Account: Sendable {
   fileprivate var _annualReturn: Double? = nil
   fileprivate var _baselineAnnual: Double? = nil
   fileprivate var _marketAnnual: Double? = nil
+  fileprivate var _r10Annual: Double? = nil
 }
 
-struct Equities_V1_Position: Sendable {
+struct Equities_V1_Position: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var ticker: String = String()
+  var ticker: String {
+    get {_storage._ticker}
+    set {_uniqueStorage()._ticker = newValue}
+  }
 
-  var name: String = String()
+  var name: String {
+    get {_storage._name}
+    set {_uniqueStorage()._name = newValue}
+  }
 
-  var kind: Equities_V1_PositionKind = .unspecified
+  var kind: Equities_V1_PositionKind {
+    get {_storage._kind}
+    set {_uniqueStorage()._kind = newValue}
+  }
 
   /// Negative for a short.
-  var quantity: Double = 0
+  var quantity: Double {
+    get {_storage._quantity}
+    set {_uniqueStorage()._quantity = newValue}
+  }
 
   /// Per share; per contract (x100) for an option.
-  var price: Double = 0
+  var price: Double {
+    get {_storage._price}
+    set {_uniqueStorage()._price = newValue}
+  }
 
   /// quantity x price: negative for a short or a margin debit.
-  var value: Double = 0
+  var value: Double {
+    get {_storage._value}
+    set {_uniqueStorage()._value = newValue}
+  }
 
   /// What the position cost, so value - cost is its unrealized gain; for a
   /// short, minus what the short sales brought in. Unset when not known, and
   /// for options and cash.
   var cost: Double {
-    get {_cost ?? 0}
-    set {_cost = newValue}
+    get {_storage._cost ?? 0}
+    set {_uniqueStorage()._cost = newValue}
   }
   /// Returns true if `cost` has been explicitly set.
-  var hasCost: Bool {self._cost != nil}
+  var hasCost: Bool {_storage._cost != nil}
   /// Clears the value of `cost`. Subsequent reads from it will return its default value.
-  mutating func clearCost() {self._cost = nil}
+  mutating func clearCost() {_uniqueStorage()._cost = nil}
 
-  var costSource: Equities_V1_CostSource = .unspecified
+  var costSource: Equities_V1_CostSource {
+    get {_storage._costSource}
+    set {_uniqueStorage()._costSource = newValue}
+  }
 
   /// The day of the price: days since 1970-01-01.
-  var priceEpochDay: Int32 = 0
+  var priceEpochDay: Int32 {
+    get {_storage._priceEpochDay}
+    set {_uniqueStorage()._priceEpochDay = newValue}
+  }
 
   /// The baseline: the dollars that bought the shares still held, put into
   /// the baseline (HoldingsResponse.baseline) on the same days instead, and
@@ -957,22 +1003,22 @@ struct Equities_V1_Position: Sendable {
   /// Unset when the buys on record (Plaid's two years) don't account for
   /// every share, and for shorts, options, cash.
   var baselineCost: Double {
-    get {_baselineCost ?? 0}
-    set {_baselineCost = newValue}
+    get {_storage._baselineCost ?? 0}
+    set {_uniqueStorage()._baselineCost = newValue}
   }
   /// Returns true if `baselineCost` has been explicitly set.
-  var hasBaselineCost: Bool {self._baselineCost != nil}
+  var hasBaselineCost: Bool {_storage._baselineCost != nil}
   /// Clears the value of `baselineCost`. Subsequent reads from it will return its default value.
-  mutating func clearBaselineCost() {self._baselineCost = nil}
+  mutating func clearBaselineCost() {_uniqueStorage()._baselineCost = nil}
 
   var baselineValue: Double {
-    get {_baselineValue ?? 0}
-    set {_baselineValue = newValue}
+    get {_storage._baselineValue ?? 0}
+    set {_uniqueStorage()._baselineValue = newValue}
   }
   /// Returns true if `baselineValue` has been explicitly set.
-  var hasBaselineValue: Bool {self._baselineValue != nil}
+  var hasBaselineValue: Bool {_storage._baselineValue != nil}
   /// Clears the value of `baselineValue`. Subsequent reads from it will return its default value.
-  mutating func clearBaselineValue() {self._baselineValue = nil}
+  mutating func clearBaselineValue() {_uniqueStorage()._baselineValue = nil}
 
   /// Cash dividends on the security in this account since the oldest of
   /// those buys: money in, positive. Set with the baseline. Both sides then
@@ -980,13 +1026,13 @@ struct Equities_V1_Position: Sendable {
   /// baseline_cost, the baseline's baseline_value - baseline_cost, and the
   /// gain over r (under r when negative) is value + dividends - baseline_value.
   var dividends: Double {
-    get {_dividends ?? 0}
-    set {_dividends = newValue}
+    get {_storage._dividends ?? 0}
+    set {_uniqueStorage()._dividends = newValue}
   }
   /// Returns true if `dividends` has been explicitly set.
-  var hasDividends: Bool {self._dividends != nil}
+  var hasDividends: Bool {_storage._dividends != nil}
   /// Clears the value of `dividends`. Subsequent reads from it will return its default value.
-  mutating func clearDividends() {self._dividends = nil}
+  mutating func clearDividends() {_uniqueStorage()._dividends = nil}
 
   /// The same dollars as baseline_cost, on the same days, in the market
   /// (HoldingsResponse.market) instead, dividends included: what they'd be
@@ -994,55 +1040,68 @@ struct Equities_V1_Position: Sendable {
   /// less the market's on the same money: with beta taken as 1, Jensen's
   /// alpha in dollars. Set with the baseline.
   var marketValue: Double {
-    get {_marketValue ?? 0}
-    set {_marketValue = newValue}
+    get {_storage._marketValue ?? 0}
+    set {_uniqueStorage()._marketValue = newValue}
   }
   /// Returns true if `marketValue` has been explicitly set.
-  var hasMarketValue: Bool {self._marketValue != nil}
+  var hasMarketValue: Bool {_storage._marketValue != nil}
   /// Clears the value of `marketValue`. Subsequent reads from it will return its default value.
-  mutating func clearMarketValue() {self._marketValue = nil}
+  mutating func clearMarketValue() {_uniqueStorage()._marketValue = nil}
 
   /// The position's annual rates, as HoldingsResponse's: set only when its
   /// oldest held buy is a year old or more (shorter rates aren't annualized).
   var annualReturn: Double {
-    get {_annualReturn ?? 0}
-    set {_annualReturn = newValue}
+    get {_storage._annualReturn ?? 0}
+    set {_uniqueStorage()._annualReturn = newValue}
   }
   /// Returns true if `annualReturn` has been explicitly set.
-  var hasAnnualReturn: Bool {self._annualReturn != nil}
+  var hasAnnualReturn: Bool {_storage._annualReturn != nil}
   /// Clears the value of `annualReturn`. Subsequent reads from it will return its default value.
-  mutating func clearAnnualReturn() {self._annualReturn = nil}
+  mutating func clearAnnualReturn() {_uniqueStorage()._annualReturn = nil}
 
   var baselineAnnual: Double {
-    get {_baselineAnnual ?? 0}
-    set {_baselineAnnual = newValue}
+    get {_storage._baselineAnnual ?? 0}
+    set {_uniqueStorage()._baselineAnnual = newValue}
   }
   /// Returns true if `baselineAnnual` has been explicitly set.
-  var hasBaselineAnnual: Bool {self._baselineAnnual != nil}
+  var hasBaselineAnnual: Bool {_storage._baselineAnnual != nil}
   /// Clears the value of `baselineAnnual`. Subsequent reads from it will return its default value.
-  mutating func clearBaselineAnnual() {self._baselineAnnual = nil}
+  mutating func clearBaselineAnnual() {_uniqueStorage()._baselineAnnual = nil}
 
   var marketAnnual: Double {
-    get {_marketAnnual ?? 0}
-    set {_marketAnnual = newValue}
+    get {_storage._marketAnnual ?? 0}
+    set {_uniqueStorage()._marketAnnual = newValue}
   }
   /// Returns true if `marketAnnual` has been explicitly set.
-  var hasMarketAnnual: Bool {self._marketAnnual != nil}
+  var hasMarketAnnual: Bool {_storage._marketAnnual != nil}
   /// Clears the value of `marketAnnual`. Subsequent reads from it will return its default value.
-  mutating func clearMarketAnnual() {self._marketAnnual = nil}
+  mutating func clearMarketAnnual() {_uniqueStorage()._marketAnnual = nil}
+
+  /// What the same dollars would be worth at the 10-year yield of each buy
+  /// day (r10), as baseline_value is in MINT; and its annual rate.
+  var r10Value: Double {
+    get {_storage._r10Value ?? 0}
+    set {_uniqueStorage()._r10Value = newValue}
+  }
+  /// Returns true if `r10Value` has been explicitly set.
+  var hasR10Value: Bool {_storage._r10Value != nil}
+  /// Clears the value of `r10Value`. Subsequent reads from it will return its default value.
+  mutating func clearR10Value() {_uniqueStorage()._r10Value = nil}
+
+  var r10Annual: Double {
+    get {_storage._r10Annual ?? 0}
+    set {_uniqueStorage()._r10Annual = newValue}
+  }
+  /// Returns true if `r10Annual` has been explicitly set.
+  var hasR10Annual: Bool {_storage._r10Annual != nil}
+  /// Clears the value of `r10Annual`. Subsequent reads from it will return its default value.
+  mutating func clearR10Annual() {_uniqueStorage()._r10Annual = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
-  fileprivate var _cost: Double? = nil
-  fileprivate var _baselineCost: Double? = nil
-  fileprivate var _baselineValue: Double? = nil
-  fileprivate var _dividends: Double? = nil
-  fileprivate var _marketValue: Double? = nil
-  fileprivate var _annualReturn: Double? = nil
-  fileprivate var _baselineAnnual: Double? = nil
-  fileprivate var _marketAnnual: Double? = nil
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 struct Equities_V1_MacroRequest: Sendable {
@@ -1411,7 +1470,7 @@ extension Equities_V1_HoldingsRequest: SwiftProtobuf.Message, SwiftProtobuf._Mes
 
 extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".HoldingsResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}accounts\0\u{3}synced_unix\0\u{1}baseline\0\u{3}baseline_epoch_day\0\u{1}market\0\u{3}market_epoch_day\0\u{3}annual_return\0\u{3}baseline_annual\0\u{3}market_annual\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}accounts\0\u{3}synced_unix\0\u{1}baseline\0\u{3}baseline_epoch_day\0\u{1}market\0\u{3}market_epoch_day\0\u{3}annual_return\0\u{3}baseline_annual\0\u{3}market_annual\0\u{3}r10_annual\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1428,6 +1487,7 @@ extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
       case 7: try { try decoder.decodeSingularDoubleField(value: &self._annualReturn) }()
       case 8: try { try decoder.decodeSingularDoubleField(value: &self._baselineAnnual) }()
       case 9: try { try decoder.decodeSingularDoubleField(value: &self._marketAnnual) }()
+      case 10: try { try decoder.decodeSingularDoubleField(value: &self._r10Annual) }()
       default: break
       }
     }
@@ -1465,6 +1525,9 @@ extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
     try { if let v = self._marketAnnual {
       try visitor.visitSingularDoubleField(value: v, fieldNumber: 9)
     } }()
+    try { if let v = self._r10Annual {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 10)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1478,6 +1541,7 @@ extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
     if lhs._annualReturn != rhs._annualReturn {return false}
     if lhs._baselineAnnual != rhs._baselineAnnual {return false}
     if lhs._marketAnnual != rhs._marketAnnual {return false}
+    if lhs._r10Annual != rhs._r10Annual {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1485,7 +1549,7 @@ extension Equities_V1_HoldingsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 extension Equities_V1_Account: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Account"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}institution\0\u{1}name\0\u{1}subtype\0\u{1}balance\0\u{1}positions\0\u{3}annual_return\0\u{3}baseline_annual\0\u{3}market_annual\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}institution\0\u{1}name\0\u{1}subtype\0\u{1}balance\0\u{1}positions\0\u{3}annual_return\0\u{3}baseline_annual\0\u{3}market_annual\0\u{3}r10_annual\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1501,6 +1565,7 @@ extension Equities_V1_Account: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
       case 6: try { try decoder.decodeSingularDoubleField(value: &self._annualReturn) }()
       case 7: try { try decoder.decodeSingularDoubleField(value: &self._baselineAnnual) }()
       case 8: try { try decoder.decodeSingularDoubleField(value: &self._marketAnnual) }()
+      case 9: try { try decoder.decodeSingularDoubleField(value: &self._r10Annual) }()
       default: break
       }
     }
@@ -1535,6 +1600,9 @@ extension Equities_V1_Account: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
     try { if let v = self._marketAnnual {
       try visitor.visitSingularDoubleField(value: v, fieldNumber: 8)
     } }()
+    try { if let v = self._r10Annual {
+      try visitor.visitSingularDoubleField(value: v, fieldNumber: 9)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1547,6 +1615,7 @@ extension Equities_V1_Account: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
     if lhs._annualReturn != rhs._annualReturn {return false}
     if lhs._baselineAnnual != rhs._baselineAnnual {return false}
     if lhs._marketAnnual != rhs._marketAnnual {return false}
+    if lhs._r10Annual != rhs._r10Annual {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1554,108 +1623,188 @@ extension Equities_V1_Account: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
 
 extension Equities_V1_Position: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Position"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ticker\0\u{1}name\0\u{1}kind\0\u{1}quantity\0\u{1}price\0\u{1}value\0\u{1}cost\0\u{3}cost_source\0\u{3}price_epoch_day\0\u{3}baseline_cost\0\u{3}baseline_value\0\u{1}dividends\0\u{3}market_value\0\u{3}annual_return\0\u{3}baseline_annual\0\u{3}market_annual\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ticker\0\u{1}name\0\u{1}kind\0\u{1}quantity\0\u{1}price\0\u{1}value\0\u{1}cost\0\u{3}cost_source\0\u{3}price_epoch_day\0\u{3}baseline_cost\0\u{3}baseline_value\0\u{1}dividends\0\u{3}market_value\0\u{3}annual_return\0\u{3}baseline_annual\0\u{3}market_annual\0\u{3}r10_value\0\u{3}r10_annual\0")
+
+  fileprivate class _StorageClass {
+    var _ticker: String = String()
+    var _name: String = String()
+    var _kind: Equities_V1_PositionKind = .unspecified
+    var _quantity: Double = 0
+    var _price: Double = 0
+    var _value: Double = 0
+    var _cost: Double? = nil
+    var _costSource: Equities_V1_CostSource = .unspecified
+    var _priceEpochDay: Int32 = 0
+    var _baselineCost: Double? = nil
+    var _baselineValue: Double? = nil
+    var _dividends: Double? = nil
+    var _marketValue: Double? = nil
+    var _annualReturn: Double? = nil
+    var _baselineAnnual: Double? = nil
+    var _marketAnnual: Double? = nil
+    var _r10Value: Double? = nil
+    var _r10Annual: Double? = nil
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _ticker = source._ticker
+      _name = source._name
+      _kind = source._kind
+      _quantity = source._quantity
+      _price = source._price
+      _value = source._value
+      _cost = source._cost
+      _costSource = source._costSource
+      _priceEpochDay = source._priceEpochDay
+      _baselineCost = source._baselineCost
+      _baselineValue = source._baselineValue
+      _dividends = source._dividends
+      _marketValue = source._marketValue
+      _annualReturn = source._annualReturn
+      _baselineAnnual = source._baselineAnnual
+      _marketAnnual = source._marketAnnual
+      _r10Value = source._r10Value
+      _r10Annual = source._r10Annual
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.ticker) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
-      case 3: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
-      case 4: try { try decoder.decodeSingularDoubleField(value: &self.quantity) }()
-      case 5: try { try decoder.decodeSingularDoubleField(value: &self.price) }()
-      case 6: try { try decoder.decodeSingularDoubleField(value: &self.value) }()
-      case 7: try { try decoder.decodeSingularDoubleField(value: &self._cost) }()
-      case 8: try { try decoder.decodeSingularEnumField(value: &self.costSource) }()
-      case 9: try { try decoder.decodeSingularInt32Field(value: &self.priceEpochDay) }()
-      case 10: try { try decoder.decodeSingularDoubleField(value: &self._baselineCost) }()
-      case 11: try { try decoder.decodeSingularDoubleField(value: &self._baselineValue) }()
-      case 12: try { try decoder.decodeSingularDoubleField(value: &self._dividends) }()
-      case 13: try { try decoder.decodeSingularDoubleField(value: &self._marketValue) }()
-      case 14: try { try decoder.decodeSingularDoubleField(value: &self._annualReturn) }()
-      case 15: try { try decoder.decodeSingularDoubleField(value: &self._baselineAnnual) }()
-      case 16: try { try decoder.decodeSingularDoubleField(value: &self._marketAnnual) }()
-      default: break
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularStringField(value: &_storage._ticker) }()
+        case 2: try { try decoder.decodeSingularStringField(value: &_storage._name) }()
+        case 3: try { try decoder.decodeSingularEnumField(value: &_storage._kind) }()
+        case 4: try { try decoder.decodeSingularDoubleField(value: &_storage._quantity) }()
+        case 5: try { try decoder.decodeSingularDoubleField(value: &_storage._price) }()
+        case 6: try { try decoder.decodeSingularDoubleField(value: &_storage._value) }()
+        case 7: try { try decoder.decodeSingularDoubleField(value: &_storage._cost) }()
+        case 8: try { try decoder.decodeSingularEnumField(value: &_storage._costSource) }()
+        case 9: try { try decoder.decodeSingularInt32Field(value: &_storage._priceEpochDay) }()
+        case 10: try { try decoder.decodeSingularDoubleField(value: &_storage._baselineCost) }()
+        case 11: try { try decoder.decodeSingularDoubleField(value: &_storage._baselineValue) }()
+        case 12: try { try decoder.decodeSingularDoubleField(value: &_storage._dividends) }()
+        case 13: try { try decoder.decodeSingularDoubleField(value: &_storage._marketValue) }()
+        case 14: try { try decoder.decodeSingularDoubleField(value: &_storage._annualReturn) }()
+        case 15: try { try decoder.decodeSingularDoubleField(value: &_storage._baselineAnnual) }()
+        case 16: try { try decoder.decodeSingularDoubleField(value: &_storage._marketAnnual) }()
+        case 17: try { try decoder.decodeSingularDoubleField(value: &_storage._r10Value) }()
+        case 18: try { try decoder.decodeSingularDoubleField(value: &_storage._r10Annual) }()
+        default: break
+        }
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.ticker.isEmpty {
-      try visitor.visitSingularStringField(value: self.ticker, fieldNumber: 1)
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      if !_storage._ticker.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._ticker, fieldNumber: 1)
+      }
+      if !_storage._name.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._name, fieldNumber: 2)
+      }
+      if _storage._kind != .unspecified {
+        try visitor.visitSingularEnumField(value: _storage._kind, fieldNumber: 3)
+      }
+      if _storage._quantity.bitPattern != 0 {
+        try visitor.visitSingularDoubleField(value: _storage._quantity, fieldNumber: 4)
+      }
+      if _storage._price.bitPattern != 0 {
+        try visitor.visitSingularDoubleField(value: _storage._price, fieldNumber: 5)
+      }
+      if _storage._value.bitPattern != 0 {
+        try visitor.visitSingularDoubleField(value: _storage._value, fieldNumber: 6)
+      }
+      try { if let v = _storage._cost {
+        try visitor.visitSingularDoubleField(value: v, fieldNumber: 7)
+      } }()
+      if _storage._costSource != .unspecified {
+        try visitor.visitSingularEnumField(value: _storage._costSource, fieldNumber: 8)
+      }
+      if _storage._priceEpochDay != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._priceEpochDay, fieldNumber: 9)
+      }
+      try { if let v = _storage._baselineCost {
+        try visitor.visitSingularDoubleField(value: v, fieldNumber: 10)
+      } }()
+      try { if let v = _storage._baselineValue {
+        try visitor.visitSingularDoubleField(value: v, fieldNumber: 11)
+      } }()
+      try { if let v = _storage._dividends {
+        try visitor.visitSingularDoubleField(value: v, fieldNumber: 12)
+      } }()
+      try { if let v = _storage._marketValue {
+        try visitor.visitSingularDoubleField(value: v, fieldNumber: 13)
+      } }()
+      try { if let v = _storage._annualReturn {
+        try visitor.visitSingularDoubleField(value: v, fieldNumber: 14)
+      } }()
+      try { if let v = _storage._baselineAnnual {
+        try visitor.visitSingularDoubleField(value: v, fieldNumber: 15)
+      } }()
+      try { if let v = _storage._marketAnnual {
+        try visitor.visitSingularDoubleField(value: v, fieldNumber: 16)
+      } }()
+      try { if let v = _storage._r10Value {
+        try visitor.visitSingularDoubleField(value: v, fieldNumber: 17)
+      } }()
+      try { if let v = _storage._r10Annual {
+        try visitor.visitSingularDoubleField(value: v, fieldNumber: 18)
+      } }()
     }
-    if !self.name.isEmpty {
-      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
-    }
-    if self.kind != .unspecified {
-      try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 3)
-    }
-    if self.quantity.bitPattern != 0 {
-      try visitor.visitSingularDoubleField(value: self.quantity, fieldNumber: 4)
-    }
-    if self.price.bitPattern != 0 {
-      try visitor.visitSingularDoubleField(value: self.price, fieldNumber: 5)
-    }
-    if self.value.bitPattern != 0 {
-      try visitor.visitSingularDoubleField(value: self.value, fieldNumber: 6)
-    }
-    try { if let v = self._cost {
-      try visitor.visitSingularDoubleField(value: v, fieldNumber: 7)
-    } }()
-    if self.costSource != .unspecified {
-      try visitor.visitSingularEnumField(value: self.costSource, fieldNumber: 8)
-    }
-    if self.priceEpochDay != 0 {
-      try visitor.visitSingularInt32Field(value: self.priceEpochDay, fieldNumber: 9)
-    }
-    try { if let v = self._baselineCost {
-      try visitor.visitSingularDoubleField(value: v, fieldNumber: 10)
-    } }()
-    try { if let v = self._baselineValue {
-      try visitor.visitSingularDoubleField(value: v, fieldNumber: 11)
-    } }()
-    try { if let v = self._dividends {
-      try visitor.visitSingularDoubleField(value: v, fieldNumber: 12)
-    } }()
-    try { if let v = self._marketValue {
-      try visitor.visitSingularDoubleField(value: v, fieldNumber: 13)
-    } }()
-    try { if let v = self._annualReturn {
-      try visitor.visitSingularDoubleField(value: v, fieldNumber: 14)
-    } }()
-    try { if let v = self._baselineAnnual {
-      try visitor.visitSingularDoubleField(value: v, fieldNumber: 15)
-    } }()
-    try { if let v = self._marketAnnual {
-      try visitor.visitSingularDoubleField(value: v, fieldNumber: 16)
-    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Equities_V1_Position, rhs: Equities_V1_Position) -> Bool {
-    if lhs.ticker != rhs.ticker {return false}
-    if lhs.name != rhs.name {return false}
-    if lhs.kind != rhs.kind {return false}
-    if lhs.quantity != rhs.quantity {return false}
-    if lhs.price != rhs.price {return false}
-    if lhs.value != rhs.value {return false}
-    if lhs._cost != rhs._cost {return false}
-    if lhs.costSource != rhs.costSource {return false}
-    if lhs.priceEpochDay != rhs.priceEpochDay {return false}
-    if lhs._baselineCost != rhs._baselineCost {return false}
-    if lhs._baselineValue != rhs._baselineValue {return false}
-    if lhs._dividends != rhs._dividends {return false}
-    if lhs._marketValue != rhs._marketValue {return false}
-    if lhs._annualReturn != rhs._annualReturn {return false}
-    if lhs._baselineAnnual != rhs._baselineAnnual {return false}
-    if lhs._marketAnnual != rhs._marketAnnual {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._ticker != rhs_storage._ticker {return false}
+        if _storage._name != rhs_storage._name {return false}
+        if _storage._kind != rhs_storage._kind {return false}
+        if _storage._quantity != rhs_storage._quantity {return false}
+        if _storage._price != rhs_storage._price {return false}
+        if _storage._value != rhs_storage._value {return false}
+        if _storage._cost != rhs_storage._cost {return false}
+        if _storage._costSource != rhs_storage._costSource {return false}
+        if _storage._priceEpochDay != rhs_storage._priceEpochDay {return false}
+        if _storage._baselineCost != rhs_storage._baselineCost {return false}
+        if _storage._baselineValue != rhs_storage._baselineValue {return false}
+        if _storage._dividends != rhs_storage._dividends {return false}
+        if _storage._marketValue != rhs_storage._marketValue {return false}
+        if _storage._annualReturn != rhs_storage._annualReturn {return false}
+        if _storage._baselineAnnual != rhs_storage._baselineAnnual {return false}
+        if _storage._marketAnnual != rhs_storage._marketAnnual {return false}
+        if _storage._r10Value != rhs_storage._r10Value {return false}
+        if _storage._r10Annual != rhs_storage._r10Annual {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -21,6 +21,7 @@ final class ContractTests: XCTestCase {
         XCTAssertNil(premium(nil, 0.042))
         XCTAssertTrue(againstR(12, rate: 0.075, base: 0.042).hasSuffix(" · +3.3 pts/yr"))
         XCTAssertFalse(againstR(12).contains("pts"))
+        XCTAssertEqual(againstR10(-5, rate: 0.03, base: 0.04), "under r₁₀ " + (-5.0).formatted(.currency(code: "USD")) + " · -1.0 pts/yr")
     }
 
     func testRequestIsWhatTheServerReads() throws {

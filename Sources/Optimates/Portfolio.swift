@@ -28,7 +28,7 @@ struct PortfolioView: View {
             if let reply {
                 Section {
                     Totals(positions: reply.accounts.flatMap(\.positions), balance: reply.accounts.map(\.balance).reduce(0, +), baseline: reply.baseline, market: reply.market,
-                           rates: (reply.annualRate, reply.baselineRate, reply.marketRate))
+                           rates: (reply.annualRate, reply.baselineRate, reply.marketRate), r10: reply.r10Rate)
                 } footer: {
                     if reply.syncedUnix > 0 {
                         Text("Synced with the brokerage \(Date(timeIntervalSince1970: TimeInterval(reply.syncedUnix)).formatted(.relative(presentation: .named))). Pull to refresh.")
@@ -37,7 +37,7 @@ struct PortfolioView: View {
                 ForEach(reply.accounts, id: \.name) { account in
                     Section {
                         Totals(positions: account.positions, balance: account.balance, baseline: reply.baseline, market: reply.market,
-                               rates: (account.annualRate, account.baselineRate, account.marketRate))
+                               rates: (account.annualRate, account.baselineRate, account.marketRate), r10: account.r10Rate)
                         let positions = ordered(account.positions)
                         let all = expanded.contains(account.name)
                         ForEach(Array((all ? positions : Array(positions.prefix(Self.shownAtFirst))).enumerated()), id: \.offset) { _, p in
@@ -118,6 +118,20 @@ func overBaseline(_ positions: [Equities_V1_Position]) -> (gain: Double, baselin
             measured.count, longs.count)
 }
 
+/// The same, against r10: the same dollars compounding at the 10-year
+/// Treasury yield of each buy day, the long-run hurdle (no price risk).
+func overR10(_ positions: [Equities_V1_Position]) -> (gain: Double, r10: Double)? {
+    let measured = positions.filter { $0.kind == .long && $0.hasCost && $0.hasBaselineCost && $0.hasR10Value && $0.baselineCost > 0 }
+    guard !measured.isEmpty else { return nil }
+    return (measured.map { $0.value + $0.dividends - $0.cost }.reduce(0, +),
+            measured.map { $0.cost * ($0.r10Value / $0.baselineCost - 1) }.reduce(0, +))
+}
+
+/// "over r₁₀ +$12.00 · +3.3 pts/yr".
+func againstR10(_ excess: Double, rate: Double? = nil, base: Double? = nil) -> String {
+    against("r₁₀", excess, rate, base)
+}
+
 /// The same, against the market (SPY): what the same dollars made in the
 /// S&P 500 over the same days, dividends included. Over market less over r
 /// is the equity premium those days paid; over market itself is skill, or
@@ -169,6 +183,8 @@ private struct Totals: View {
     let market: String
     /// Annual rates (yours, r's, the market's), from the API.
     var rates: (Double?, Double?, Double?) = (nil, nil, nil)
+    /// r10's annual rate.
+    var r10: Double? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -195,6 +211,18 @@ private struct Totals: View {
                         .foregroundStyle(m.gain - m.baseline >= 0 ? Color.green : Color.red)
                 }
                 .font(.caption)
+                if let t = overR10(positions) {
+                    // r10: the 10-year yield locked in on each buy day.
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("10-year Treasuries would have made \(signedDollars(t.r10))")
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1).minimumScaleFactor(0.75)
+                        Spacer()
+                        Text(againstR10(t.gain - t.r10, rate: rates.0, base: r10)).monospacedDigit()
+                            .foregroundStyle(t.gain - t.r10 >= 0 ? Color.green : Color.red)
+                    }
+                    .font(.caption)
+                }
                 if let k = overMarket(positions) {
                     // The market: what the same dollars made in the S&P 500.
                     HStack(alignment: .firstTextBaseline) {
@@ -245,6 +273,11 @@ private struct PositionRow: View {
                         .font(.caption2).monospacedDigit()
                         .foregroundStyle(m.gain - m.baseline >= 0 ? Color.green : Color.red)
                 }
+                if let t = overR10([position]) {
+                    Text(againstR10(t.gain - t.r10, rate: position.annualRate, base: position.r10Rate))
+                        .font(.caption2).monospacedDigit()
+                        .foregroundStyle(t.gain - t.r10 >= 0 ? Color.green : Color.red)
+                }
                 if let k = overMarket([position]) {
                     Text(againstMarket(k.gain - k.market, rate: position.annualRate, base: position.marketRate))
                         .font(.caption2).monospacedDigit()
@@ -261,14 +294,17 @@ extension Equities_V1_Position {
     var annualRate: Double? { hasAnnualReturn ? annualReturn : nil }
     var baselineRate: Double? { hasBaselineAnnual ? baselineAnnual : nil }
     var marketRate: Double? { hasMarketAnnual ? marketAnnual : nil }
+    var r10Rate: Double? { hasR10Annual ? r10Annual : nil }
 }
 extension Equities_V1_Account {
     var annualRate: Double? { hasAnnualReturn ? annualReturn : nil }
     var baselineRate: Double? { hasBaselineAnnual ? baselineAnnual : nil }
     var marketRate: Double? { hasMarketAnnual ? marketAnnual : nil }
+    var r10Rate: Double? { hasR10Annual ? r10Annual : nil }
 }
 extension Equities_V1_HoldingsResponse {
     var annualRate: Double? { hasAnnualReturn ? annualReturn : nil }
     var baselineRate: Double? { hasBaselineAnnual ? baselineAnnual : nil }
     var marketRate: Double? { hasMarketAnnual ? marketAnnual : nil }
+    var r10Rate: Double? { hasR10Annual ? r10Annual : nil }
 }
