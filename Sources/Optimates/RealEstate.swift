@@ -41,8 +41,9 @@ struct RealEstateView: View {
                    series: ["MORTGAGE30US", "MORTGAGE15US", "GS10",
                             "CSUSHPISA", "CUSR0000SEHA", "CUSR0000SEHC", "MSPUS",
                             "HOUST", "PERMIT", "HSN1F", "MSACSR",
-                            "DRSFRMACBS", "TDSP", "RHORUSQ156N", "RRVRUSQ156N"],
-                   source: "Freddie Mac, S&P CoreLogic Case-Shiller, the Census Bureau, BLS, the Fed") { d in
+                            "DRSFRMACBS", "TDSP", "RHORUSQ156N", "RRVRUSQ156N",
+                            "ASTMA", "HHMSDODNS", "BOGZ1FL155035015Q", "GDP"],
+                   source: "Freddie Mac, S&P CoreLogic Case-Shiller, the Census Bureau, BLS, BEA, the Fed (Financial Accounts, Z.1)") { d in
             let s = { (id: String) in d[id] ?? [] }
             return [
                 FREDPanel(title: "mortgage rates and the 10-year (%)", lines: [
@@ -70,6 +71,17 @@ struct RealEstateView: View {
                 FREDPanel(title: "new houses for sale (months of supply)", lines: [
                     Series(name: "months of supply", points: s("MSACSR")),
                 ], format: .ratio),
+                FREDPanel(title: "mortgage debt outstanding (trillions of dollars)", lines: [
+                    Series(name: "all mortgages (homes, apartments, commercial, farm)", points: scaled(s("ASTMA"), by: 1e-6)),
+                    Series(name: "home mortgages (households)", points: scaled(s("HHMSDODNS"), by: 1e-6)),
+                    Series(name: "households' real estate, at market value", points: scaled(s("BOGZ1FL155035015Q"), by: 1e-6)),
+                ], format: .ratio),
+                FREDPanel(title: "mortgage debt, of GDP and of home values (%)", lines: [
+                    // Debt in $ millions; GDP in $ billions a year.
+                    Series(name: "all mortgages, of GDP", points: percentOf(s("ASTMA"), s("GDP"), scale: 1e-3)),
+                    Series(name: "home mortgages, of GDP", points: percentOf(s("HHMSDODNS"), s("GDP"), scale: 1e-3)),
+                    Series(name: "home mortgages, of home values (loan to value)", points: percentOf(s("HHMSDODNS"), s("BOGZ1FL155035015Q"))),
+                ]),
                 FREDPanel(title: "credit: delinquency and debt service (%)", lines: [
                     Series(name: "mortgages delinquent (banks)", points: s("DRSFRMACBS")),
                     Series(name: "debt service, of disposable income", points: s("TDSP")),
@@ -81,4 +93,16 @@ struct RealEstateView: View {
             ]
         }
     }
+}
+
+/// Each value times `by` (millions to trillions: 1e-6).
+func scaled(_ points: [Point], by: Double) -> [Point] {
+    points.map { Point(time: $0.time, value: $0.value * by) }
+}
+
+/// `a` as a percent of `b`, at `a`'s dates where `b` has a value; `scale`
+/// first puts `a` in `b`'s units (millions over billions: 1e-3).
+func percentOf(_ a: [Point], _ b: [Point], scale: Double = 1) -> [Point] {
+    let other = Series(name: "", points: b)
+    return a.compactMap { p in other.value(at: p.time).flatMap { $0 > 0 ? Point(time: p.time, value: p.value * scale / $0 * 100) : nil } }
 }
