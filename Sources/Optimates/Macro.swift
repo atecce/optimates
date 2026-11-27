@@ -79,6 +79,8 @@ struct FREDScreen: View {
     @State private var data: [String: [Point]]?
     @State private var keptFrom: Date?
     @State private var notUpdated: String?
+    /// Pulled down to refresh: the load runs again.
+    @State private var reloads = 0
     @State private var error: String?
     @State private var selected: Date?
     @AppStorage(Pins.defaultsKey) private var pins = Pins.initial
@@ -118,7 +120,8 @@ struct FREDScreen: View {
         }
         .navigationTitle(title)
         .toolbar { PinButton(key: cacheKey, pins: $pins) }
-        .task {
+        .refreshable { reloads += 1 }
+        .task(id: reloads) {
             if data == nil, let (kept, fetched) = ReplyCache.shared.get(Equities_V1_MacroResponse.self, cacheKey) {
                 data = macroData(kept)
                 keptFrom = fetched

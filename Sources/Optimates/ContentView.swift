@@ -169,6 +169,8 @@ struct Dashboard: View {
     /// the API hasn't answered since; why not, if it failed.
     @State private var keptFrom: Date?
     @State private var notUpdated: String?
+    /// Pulled down to refresh: the load runs again.
+    @State private var reloads = 0
     @State private var error: String?
     // Kept across companies, and across launches.
     @AppStorage("side") private var side = Side.stocks
@@ -311,7 +313,8 @@ struct Dashboard: View {
             }
             PinButton(key: "dashboard/\(ticker.uppercased())", pins: $pins)
         }
-        .task {
+        .refreshable { reloads += 1 }
+        .task(id: reloads) {
             // What the device kept from last time, at once; then the API's.
             let key = "dashboard/\(ticker.uppercased())"
             if data == nil, let (kept, fetched) = ReplyCache.shared.get(Equities_V1_DashboardResponse.self, key) {
